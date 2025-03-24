@@ -4,8 +4,6 @@ The purpose of this repository is to assist readers in reproducing our results u
 
 Preprint page: https://www.arxiv.org/abs/2503.11527.
 
-The code contains the original meta-data files with age and gender labels, a python script for creating prototxt file in order to create the lmdb's for training and shell files for creating the lmdb and mean images.
-
 ## Installation and Compilation
 
 Install the package by entering
