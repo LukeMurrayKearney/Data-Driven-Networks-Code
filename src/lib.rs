@@ -1,3 +1,5 @@
+use std::os::linux::net;
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
@@ -270,6 +272,10 @@ fn small_sellke(n: usize, adjacency_matrix: Vec<Vec<(usize,usize)>>, ages: Vec<u
     for &age in ages.iter() {
         partitions[age] += 1;
     }
+    partitions.iter_mut().fold(0usize, |acc, x| {
+        *x += acc;
+        *x
+    });
     let network = NetworkStructure{
         adjacency_matrix: adjacency_matrix.clone(),
         degrees: adjacency_matrix.iter().map(|x| x.len()).collect(),

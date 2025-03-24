@@ -27,7 +27,7 @@ def sellke_sims_growth_rate(partitions, contact_matrix, taus=np.arange(0.1,1,0.1
     
     return nd_r.big_sellke_growth_rate(taus, num_networks, iterations, n, partitions, dist_type, network_params, contact_matrix, outbreak_params, prop_infec, scaling)
 
-def fit_to_data(df = None, input_file_path = 'input_data/poly.csv', dist_type = "nbinom", buckets = np.array([5,12,18,30,40,50,60,70]), save_fig = True, output_file_path=None, log=False, to_csv=False, fig_data_file='',num_bins=15):
+def fit_to_data(df = None, input_file_path = 'input_data/poly.csv', dist_type = "nbinom", buckets = np.array([5,12,18,30,40,50,60,70]), save_fig = False, output_file_path=None, log=False, to_csv=False, fig_data_file='',num_bins=15):
 
     # Call the function with the provided arguments
     if df is None:
