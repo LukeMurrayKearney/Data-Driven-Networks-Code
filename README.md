@@ -20,7 +20,7 @@ Once this is complete, enter the Networks-from-Data-Package folder and install t
 pip install -r requirements.txt
 ```
 
-We now have maturin and the other dependencies installed. To compile the Rust package using the pyO3 binding in maturin enter in the terminal:
+We now have maturin and the other dependencies installed. To compile the Rust package with pyO3 bindings in maturin enter:
 
 ```md
 maturin develop --release
@@ -28,7 +28,9 @@ maturin develop --release
 
 The compiled Rust code is implemented in python through the nd_python.py python file. 
 
-The file _test_.ipynb is a jupyter notebook containing a basic use of the package to fit to a data set, build a network and simulate and outbreak. At the beginning of _test_
+The file _test_.ipynb is a jupyter notebook containing a basic use of the package to fit to data, build a network and simulate an outbreak. 
+
+At the beginning of _test_.ipynb
 
 ```md
 import nd_python as nd_p
