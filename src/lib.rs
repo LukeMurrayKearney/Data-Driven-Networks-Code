@@ -15,6 +15,25 @@ mod run_model;
 
 ////////////////////////////////////////////// Network Creation ////////////////////////////////////////
 
+//  Creates a netwrok from given source and targets
+#[pyfunction]
+fn network_from_source_and_targets(partitions: Vec<usize>, degree_dist: Vec<Vec<usize>>) -> PyResult<Py<PyDict>>  {
+    
+    // WRITE FUNCTION THAT TAKES IN DD AND PARTITIONS TO MAKE A NETWORK - JUST COPY END OF CURRENT METHOD
+    let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_dist);
+
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+
+        Ok(dict.into())
+    })
+}
+
 //  Creates a network from given variables
 #[pyfunction]
 fn network_from_vars(n: usize, partitions: Vec<usize>, dist_type: &str, network_params: Vec<Vec<f64>>, contact_matrix: Vec<Vec<f64>>) -> PyResult<Py<PyDict>>  {
@@ -134,6 +153,58 @@ fn big_sellke_sec_cases(taus: Vec<f64>, networks: usize, iterations: usize, n: u
         dict.set_item("secondary_cases9", sc9.to_object(py))?;
         dict.set_item("secondary_cases10", sc10.to_object(py))?;
 
+        
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+
+#[pyfunction]
+fn gmm_sims(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
+
+    let (mut r01, mut r023, mut final_size, mut peak_height) = (vec![vec![0.; iterations]; taus.len()], vec![vec![0.; iterations]; taus.len()], vec![vec![0; iterations]; taus.len()], vec![vec![0; iterations]; taus.len()]); 
+    // let (mut ts, mut sirs) = (Vec::new(), Vec::new());
+    // parallel simulations
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
+        let properties = network_properties::NetworkProperties::new(&network, &cur_params);
+
+        let results: Vec<(f64, f64, i64, i64, Vec<f64>, Vec<Vec<usize>>)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    let (t,_,_,sir,sec_cases,geners, _) = run_model::run_sellke(&network, &mut properties.clone(), prop_infec, scaling);
+                    if geners.iter().max().unwrap().to_owned() < 3 {
+                        (-1.,-1.,-1,-1, t,sir)
+                    }
+                    else {
+                        let gen1 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 1).map(|(_,&x)| x).collect::<Vec<usize>>();
+                        let gen23 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 2 || geners[i.to_owned()] == 3).map(|(_,&x)| x).collect::<Vec<usize>>();
+                        ((gen1.iter().sum::<usize>() as f64) / (gen1.len() as f64),(gen23.iter().sum::<usize>() as f64) / (gen23.len() as f64), sir.last().unwrap()[2] as i64, sir.iter().filter_map(|x| x.get(1)).max().unwrap().to_owned() as i64, t, sir)
+                    }
+                })
+                .collect();
+        for (k, sim) in results.iter().enumerate() {
+            r01[i][k] = sim.0; r023[i][k] = sim.1; final_size[i][k] = sim.2; peak_height[i][k] = sim.3;
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("r0_1", r01.to_object(py))?;
+        dict.set_item("r0_23", r023.to_object(py))?;
+        dict.set_item("final_size", final_size.to_object(py))?;
+        dict.set_item("peak_height", peak_height.to_object(py))?;
+        // dict.set_item("t", ts.to_object(py))?;
+        // dict.set_item("sir", sirs.to_object(py))?;
         
         // Convert dict to PyObject and return
         Ok(dict.into())
@@ -346,6 +417,7 @@ pub fn dpln_pdf(xs: Vec<f64>, network_params: Vec<f64>) -> Vec<f64> {
 /// import the module.
 #[pymodule]
 fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(network_from_source_and_targets, m)?)?;
     m.add_function(wrap_pyfunction!(network_from_vars, m)?)?;
     m.add_function(wrap_pyfunction!(sbm_from_vars, m)?)?;
     m.add_function(wrap_pyfunction!(dpln_pdf, m)?)?;
@@ -353,6 +425,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fit_dpln, m)?)?;
     m.add_function(wrap_pyfunction!(small_sellke, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke, m)?)?;
+    m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_growth_rate, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_sec_cases, m)?)?;
     Ok(())
