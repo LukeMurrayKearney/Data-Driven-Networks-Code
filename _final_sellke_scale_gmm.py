@@ -23,6 +23,11 @@ taus = [np.arange(0.0005,0.02,0.0005),
         np.arange(0.0005,0.10,0.0005)]
 taus = [[15*x for x in a] for a in taus]
 
+## 1 Need to make max larger for scaled (need to move up to 5)
+taus = [np.arange(0.0005,0.02,0.0005),
+        np.arange(0.0005,0.15,0.0005),
+        np.arange(0.0005,0.10,0.0005)]
+taus = [[20*x for x in a] for a in taus]
 
 
 for i, data in enumerate(datas):
@@ -52,6 +57,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/1_{k+3}_{data}_{model}_scale.json','w') as f:
+            with open(f'output_data/gmm/1_{k+6}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
 print('done')
