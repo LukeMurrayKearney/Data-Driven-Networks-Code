@@ -211,6 +211,61 @@ fn gmm_sims(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: u
     })
 }
 
+#[pyfunction]
+fn gmm_sims_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
+
+    let (mut r01, mut sc1, mut sc2, mut sc3) = (vec![vec![0.; iterations]; taus.len()], vec![Vec::new(); taus.len()], vec![Vec::new(); taus.len()], vec![Vec::new(); taus.len()]); 
+    // let (mut ts, mut sirs) = (Vec::new(), Vec::new());
+    // parallel simulations
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
+        let properties = network_properties::NetworkProperties::new(&network, &cur_params);
+
+        let results: Vec<(f64, Vec<usize>, Vec<usize>, Vec<usize>)>
+                = (0..iterations)
+                    .into_par_iter()
+                    .map(|_| {
+                        let (t,_,_,sir,sec_cases,geners, _) = run_model::run_sellke(&network, &mut properties.clone(), prop_infec, scaling);
+                        if geners.iter().max().unwrap().to_owned() <= 3 {
+                            (-1.,Vec::new(),Vec::new(),Vec::new())
+                        }
+                        else {
+                            let gen1 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 1).map(|(_,&x)| x).collect::<Vec<usize>>();
+                            let gen2 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 2).map(|(_,&x)| x).collect::<Vec<usize>>();
+                            let gen3 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 3).map(|(_,&x)| x).collect::<Vec<usize>>();
+                            // let gen23 = sec_cases.iter().enumerate().filter(|(i,_)| geners[i.to_owned()] == 2 || geners[i.to_owned()] == 3).map(|(_,&x)| x).collect::<Vec<usize>>();
+                            ((gen1.iter().sum::<usize>() as f64) / (gen1.len() as f64), gen1, gen2, gen3)
+                        }
+                    })
+                    .collect();
+            for (k, sim) in results.iter().enumerate() {
+                r01[i][iterations + k] = sim.0; 
+                for val in sim.1.iter() {sc1[i].push(val.to_owned());}
+                for val in sim.2.iter() {sc2[i].push(val.to_owned());}
+                for val in sim.3.iter() {sc3[i].push(val.to_owned());}
+            }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("r0_1", r01.to_object(py))?;
+        dict.set_item("secondary_cases", sc1.to_object(py))?;
+        // dict.set_item("t", ts.to_object(py))?;
+        // dict.set_item("sir", sirs.to_object(py))?;
+        
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+
 
 #[pyfunction]
 fn big_sellke(taus: Vec<f64>, networks: usize, iterations: usize, n: usize, partitions: Vec<usize>, dist_type: &str, network_params: Vec<Vec<f64>>, contact_matrix: Vec<Vec<f64>>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
@@ -426,6 +481,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(small_sellke, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
+    m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_growth_rate, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_sec_cases, m)?)?;
     Ok(())

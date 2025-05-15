@@ -20,6 +20,11 @@ def gmm_sims(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, 
     outbreak_params = [0,inv_gamma]
     return nd_r.gmm_sims(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec,scaling)
  
+def gmm_sims_sc(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3, scaling="None"):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0,inv_gamma]
+    return nd_r.gmm_sims_sc(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec,scaling)
+ 
     
 def big_sellke_sims(partitions, contact_matrix, taus=np.arange(0.1,1,0.1), num_networks=5, iterations=10, network_params=None, n=100_000, dist_type='nbinom', inv_gamma=7, prop_infec=1e-3, scaling="None", secondary_cases=False):
     partitions = [int(a) for a in partitions]

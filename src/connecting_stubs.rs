@@ -19,9 +19,9 @@ pub fn cleanup_single(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>
         .collect();
 
 
-    while source.len() > 0 && target.len() > 0  {
-        edge_list.push(connect_stub(&mut source, &mut target, rng));
-    } 
+    // while source.len() > 0 && target.len() > 0  {
+    //     edge_list.push(connect_stub(&mut source, &mut target, rng));
+    // } 
 
     // new code
     while source.len() > 0 && target.len() > 0  {
