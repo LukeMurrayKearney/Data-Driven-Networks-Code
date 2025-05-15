@@ -17,9 +17,9 @@ models = ['gmm']
 scales = ['none', 'none']
 
 ## 0
-taus = [[[0.032], [0.00017]],
-        [[0.0358], [0.000155]],
-        [[0.0395], [0.0225]]]
+taus = [[[0.00017]],
+        [[0.000155]],
+        [[0.0225]]]
 
 for i, data in enumerate(datas):
     with open(f'input_data/gmm/optimal_components_{data}_log.json', 'r') as f:
@@ -45,7 +45,7 @@ for i, data in enumerate(datas):
                 # samples.append([[np.round(np.exp(b)-1) if np.round(np.exp(b)-1)>=0 else 0 for b in a] for a in samples_tmp])
                 # print(np.shape(samples))
             
-            result = nd_p.gmm_sims_sc(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
+            result = nd_p.gmm_sims_sc(samples,partitions=partitions,taus=taus[i][j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
             with open(f'output_data/gmm/0_{k}_{data}_{model}_sc.json','w') as f:
                 json.dump(result, f)
