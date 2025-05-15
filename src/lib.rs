@@ -243,7 +243,7 @@ fn gmm_sims_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
                     })
                     .collect();
             for (k, sim) in results.iter().enumerate() {
-                r01[i][iterations + k] = sim.0; 
+                r01[i][k] = sim.0; 
                 for val in sim.1.iter() {sc1[i].push(val.to_owned());}
                 for val in sim.2.iter() {sc2[i].push(val.to_owned());}
                 for val in sim.3.iter() {sc3[i].push(val.to_owned());}
