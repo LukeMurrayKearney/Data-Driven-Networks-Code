@@ -20,6 +20,10 @@ scales = ['fit1','fit2']
 taus = [[[0.00017]],
         [[0.000155]],
         [[0.0225]]]
+## 1
+taus = [[[0.186]],
+        [[0.1564]],
+        [[0.1137]]]
 
 for i, data in enumerate(datas):
     with open(f'input_data/gmm/optimal_components_{data}_log.json', 'r') as f:
@@ -47,6 +51,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims_sc(samples,partitions=partitions,taus=taus[i][j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/0_{k+25}_{data}_{model}_scale_sc.json','w') as f:
+            with open(f'output_data/gmm/1_{k}_{data}_{model}_scale_sc.json','w') as f:
                 json.dump(result, f)
 print('done')
