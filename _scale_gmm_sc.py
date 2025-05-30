@@ -5,7 +5,7 @@ import sklearn.mixture
 import math
 
 n, iters = 50_000, 48
-num_networks = 20
+num_networks = 100
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -51,6 +51,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims_sc(samples,partitions=partitions,taus=taus[i][j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/1_{k}_{data}_{model}_scale_sc.json','w') as f:
+            with open(f'output_data/gmm/1_{k+20}_{data}_{model}_scale_sc.json','w') as f:
                 json.dump(result, f)
 print('done')
