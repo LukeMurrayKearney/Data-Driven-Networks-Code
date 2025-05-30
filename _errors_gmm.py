@@ -2,11 +2,11 @@ import nd_python as nd_p
 import numpy as np
 import csv
 import sys
-import sklearn
+import sklearn.mixture
 import json
 import math
 
-data = 'comix1'
+data = 'poly'
 model = 'gmm'
 
 n, iters = 100_000, 30
@@ -33,7 +33,6 @@ for i in bins:
     for j in bins:
         distance_matrix[i,j] = np.float64(np.abs(i-j))
 
-print(data, model)
 error, error_breakdown = [], []
 error_with_itself, error_with_itself_breakdown = [], []
 for i in range(iters):
