@@ -51,6 +51,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims_sc(samples,partitions=partitions,taus=taus[i][j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/1_{k+20}_{data}_{model}_scale_sc.json','w') as f:
+            with open(f'output_data/gmm/1_{k+120}_{data}_{model}_scale_sc.json','w') as f:
                 json.dump(result, f)
 print('done')
