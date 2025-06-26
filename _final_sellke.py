@@ -2,7 +2,7 @@ import nd_python_avon as nd_p
 import numpy as np
 import json
 
-n, iters = 10_000, 48
+n, iters = 100_000, 48
 
 
 buckets = np.array([5,12,18,30,40,50,60,70])
