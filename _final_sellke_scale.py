@@ -51,9 +51,9 @@ scales = ['fit1', 'fit2']
 
 ## comix3
 ## 0
-taus = [np.arange(0.01,0.4,0.01),
-        np.arange(0.01,0.6,0.01),
-        np.arange(0.01,0.5,0.01)]
+taus = [[np.arange(0.01,0.4,0.01)],
+        [np.arange(0.01,0.6,0.01)],
+        [np.arange(0.01,0.5,0.01)]]
 
 ##long
 ## 0,1,2
