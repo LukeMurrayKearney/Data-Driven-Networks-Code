@@ -4,7 +4,7 @@ import json
 import sklearn.mixture
 import math
 
-n, iters = 50_000, 48
+n, iters = 100_000, 48
 num_networks = 5
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -12,7 +12,8 @@ partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.8
 
 per_partition = [a+1 if i == 0 else a-partitions[i-1] for i, a in enumerate(partitions)]
 
-datas = ['comix1','comix2','poly']
+# datas = ['comix1','comix2','poly']
+datas = ['comix3']
 models = ['gmm']
 scales = ['none']
 
@@ -20,7 +21,7 @@ scales = ['none']
 taus = [np.arange(0.001,0.03,0.001),
         np.arange(0.001,0.03,0.001),
         np.arange(0.005,0.11,0.005)]
-## 2
+## 2 / comix3 0
 taus = [np.arange(0.0005,0.007,0.0005),
         np.arange(0.0005,0.005,0.0005),
         np.arange(0.002,0.07,0.002)]
@@ -54,6 +55,6 @@ for i, data in enumerate(datas):
             print(taus[i])
             result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[0])
                 
-            with open(f'output_data/gmm/2_{k}_{data}_{model}_{scales[j]}.json','w') as f:
+            with open(f'output_data/gmm/0_{k}_{data}_{model}_{scales[j]}.json','w') as f:
                 json.dump(result, f)
 print('done')

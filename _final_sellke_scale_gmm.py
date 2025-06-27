@@ -4,7 +4,7 @@ import json
 import sklearn.mixture
 import math
 
-n, iters = 50_000, 48
+n, iters = 100_000, 48
 num_networks = 5
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -13,23 +13,24 @@ partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.8
 per_partition = [a+1 if i == 0 else a-partitions[i-1] for i, a in enumerate(partitions)]
 
 
-datas = ['comix1','comix2','poly']
+# datas = ['comix1','comix2','poly']
+datas = ['comix3']
 models = ['gmm']
 scales = ['fit1', 'fit2']
 
 ## 0
-taus = [np.arange(0.0005,0.02,0.0005),
-        np.arange(0.0005,0.15,0.0005),
-        np.arange(0.0005,0.10,0.0005)]
-taus = [[15*x for x in a] for a in taus]
+# taus = [np.arange(0.0005,0.02,0.0005),
+#         np.arange(0.0005,0.15,0.0005),
+#         np.arange(0.0005,0.10,0.0005)]
+# taus = [[15*x for x in a] for a in taus]
 
-## 1 Need to make max larger for scaled (need to move up to 5)
-taus = [np.arange(0.0005,0.02,0.0005),
-        np.arange(0.0005,0.15,0.0005),
-        np.arange(0.0005,0.10,0.0005)]
-taus = [[20*x for x in a] for a in taus]
+# ## 1 Need to make max larger for scaled (need to move up to 5)
+# taus = [np.arange(0.0005,0.02,0.0005),
+#         np.arange(0.0005,0.15,0.0005),
+#         np.arange(0.0005,0.10,0.0005)]
+# taus = [[20*x for x in a] for a in taus]
 
-## 2 
+## 2 / comix3 0
 taus = [np.arange(0.01,0.4,0.01),
         np.arange(0.01,0.6,0.01),
         np.arange(0.01,0.5,0.01)]
@@ -62,6 +63,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/2_{k}_{data}_{model}_scale.json','w') as f:
+            with open(f'output_data/gmm/0_{k}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
 print('done')
