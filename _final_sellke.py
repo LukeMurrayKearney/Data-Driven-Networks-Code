@@ -46,7 +46,7 @@ taus = [[np.arange(0.1,0.205,0.005), np.arange(0.0005,0.01,0.0005)],
         [np.arange(0.05,0.2,0.01), np.arange(0.0005,0.01,0.0005)],
         [np.arange(0.001,0.1,0.005), np.arange(0.0025,0.05,0.0025)]]
 
-##comix3 1 ^
+##comix3 1 ^ / switch to c2 for c3 from 6
 
 
 for i, data in enumerate(datas):
@@ -64,8 +64,8 @@ for i, data in enumerate(datas):
         #     result['avg_degree'].append(np.mean([a for a in network['degrees']]))
         #     result['max_degree'].append(max([a for a in network['degrees']]))
         # result = nd_p.build_network(n,partitions,contact_matrix,params,model)
-        result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[i][j],prop_infec=10/n, scaling=scales[j])
+        result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[1][j],prop_infec=10/n, scaling=scales[j])
         # print(sum(result['degrees']))
-        with open(f'output_data/sims/5_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/6_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')

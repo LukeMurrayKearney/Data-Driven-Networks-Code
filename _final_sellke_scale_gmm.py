@@ -30,7 +30,7 @@ scales = ['fit1', 'fit2']
 #         np.arange(0.0005,0.10,0.0005)]
 # taus = [[20*x for x in a] for a in taus]
 
-## 2 / comix3 0
+## 2 / comix3 0, 85+ used c2 for c3
 taus = [np.arange(0.01,0.4,0.01),
         np.arange(0.01,0.6,0.01),
         np.arange(0.01,0.5,0.01)]
@@ -61,8 +61,8 @@ for i, data in enumerate(datas):
                 # samples.append([[np.round(np.exp(b)-1) if np.round(np.exp(b)-1)>=0 else 0 for b in a] for a in samples_tmp])
                 # print(np.shape(samples))
             
-            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
+            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[1], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/0_{k+65}_{data}_{model}_scale.json','w') as f:
+            with open(f'output_data/gmm/0_{k+85}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
 print('done')

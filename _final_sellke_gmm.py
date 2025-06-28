@@ -21,7 +21,7 @@ scales = ['none']
 taus = [np.arange(0.001,0.03,0.001),
         np.arange(0.001,0.03,0.001),
         np.arange(0.005,0.11,0.005)]
-## 2 / comix3 0
+## 2 / comix3 0, used c2 from 85
 taus = [np.arange(0.0005,0.007,0.0005),
         np.arange(0.0005,0.005,0.0005),
         np.arange(0.002,0.07,0.002)]
@@ -53,8 +53,8 @@ for i, data in enumerate(datas):
                 # print(samples)
             print(scales[0])
             print(taus[i])
-            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[0])
+            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[1], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[0])
                 
-            with open(f'output_data/gmm/0_{k+65}_{data}_{model}_{scales[j]}.json','w') as f:
+            with open(f'output_data/gmm/0_{k+85}_{data}_{model}_{scales[j]}.json','w') as f:
                 json.dump(result, f)
 print('done')
