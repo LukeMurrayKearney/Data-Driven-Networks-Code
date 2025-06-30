@@ -77,6 +77,6 @@ for i, data in enumerate(datas):
         #     result['avg_degree'].append(np.mean([a for a in network['degrees']]))
         #     result['max_degree'].append(max([a for a in network['degrees']]))
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[1][j],prop_infec=10/n, scaling=scales[j])
-        with open(f'output_data/sims/6_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/7_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')
