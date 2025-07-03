@@ -26,7 +26,6 @@ taus = [np.arange(0.0005,0.007,0.0005),
         np.arange(0.0005,0.005,0.0005),
         np.arange(0.002,0.07,0.002)]
 
-
 for i, data in enumerate(datas):
     for j, model in enumerate(models):
         with open(f'input_data/gmm/optimal_components_{data}_log.json', 'r') as f:
@@ -55,6 +54,6 @@ for i, data in enumerate(datas):
             print(taus[i])
             result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[1], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[0])
                 
-            with open(f'output_data/gmm/0_{k+125}_{data}_{model}_{scales[j]}.json','w') as f:
+            with open(f'output_data/gmm/0_{k+145}_{data}_{model}_{scales[j]}.json','w') as f:
                 json.dump(result, f)
 print('done')

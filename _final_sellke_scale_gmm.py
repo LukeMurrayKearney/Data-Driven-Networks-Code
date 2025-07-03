@@ -14,7 +14,7 @@ per_partition = [a+1 if i == 0 else a-partitions[i-1] for i, a in enumerate(part
 
 
 # datas = ['comix1','comix2','poly']
-datas = ['comix3']
+datas = ['comix1','comix3']
 models = ['gmm']
 scales = ['fit1', 'fit2']
 
@@ -34,6 +34,10 @@ scales = ['fit1', 'fit2']
 taus = [np.arange(0.01,0.4,0.01),
         np.arange(0.01,0.6,0.01),
         np.arange(0.01,0.5,0.01)]
+
+# 3,1 comix 1 and comix 3
+taus = [np.arange(0.35,0.6,0.01),
+        np.arange(0.3,0.7,0.01)]
 
 
 for i, data in enumerate(datas):
@@ -61,8 +65,8 @@ for i, data in enumerate(datas):
                 # samples.append([[np.round(np.exp(b)-1) if np.round(np.exp(b)-1)>=0 else 0 for b in a] for a in samples_tmp])
                 # print(np.shape(samples))
             
-            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[1], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
+            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/0_{k+125}_{data}_{model}_scale.json','w') as f:
+            with open(f'output_data/gmm/{3 if j==0 else 1}_{k}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
 print('done')
