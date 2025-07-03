@@ -65,7 +65,7 @@ for i, data in enumerate(datas):
                 # samples.append([[np.round(np.exp(b)-1) if np.round(np.exp(b)-1)>=0 else 0 for b in a] for a in samples_tmp])
                 # print(np.shape(samples))
             
-            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[j], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
+            result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
             with open(f'output_data/gmm/{3 if j==0 else 1}_{k}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
