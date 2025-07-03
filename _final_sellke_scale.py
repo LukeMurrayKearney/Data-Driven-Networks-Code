@@ -6,8 +6,8 @@ n, iters = 100_000, 48
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
 
-# datas = ['comix1','comix2','poly']
-datas = ['comix3']
+datas = ['comix1','comix2','poly']
+# datas = ['comix3']
 models = ['dpln']
 scales = ['fit1', 'fit2']
 
@@ -48,12 +48,16 @@ scales = ['fit1', 'fit2']
 #         [np.arange(0.0005,0.09,0.0005)],
 #         [np.arange(0.0005,0.06,0.0005)]]
 # taus = [[15*x for x in a] for a in taus]
+# 37
+taus = [[np.arange(0.6,1.2,0.05)],
+        [np.arange(0.8,1.5,0.05)],
+        [np.arange(0.8,1.1,0.05)]]
 
 ## comix3
 ## 0/ switch to c2 for c3 at 6
-taus = [[np.arange(0.01,0.4,0.01)],
-        [np.arange(0.01,0.6,0.01)],
-        [np.arange(0.01,0.5,0.01)]]
+# taus = [[np.arange(0.01,0.4,0.01)],
+#         [np.arange(0.01,0.6,0.01)],
+#         [np.arange(0.01,0.5,0.01)]]
 
 ##long
 ## 0,1,2
@@ -77,6 +81,6 @@ for i, data in enumerate(datas):
         #     result['avg_degree'].append(np.mean([a for a in network['degrees']]))
         #     result['max_degree'].append(max([a for a in network['degrees']]))
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[1][j],prop_infec=10/n, scaling=scales[j])
-        with open(f'output_data/sims/8_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/37_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')

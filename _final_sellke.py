@@ -8,8 +8,8 @@ n, iters = 100_000, 48
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
 
-# datas = ['comix1','comix2','poly']
-datas = ['comix3']
+datas = ['comix1','comix2','poly']
+# datas = ['comix3']
 models = ['sbm','dpln']
 scales = ['none', 'none']
 
@@ -42,11 +42,19 @@ scales = ['none', 'none']
 #         [np.arange(0.005,0.05,0.005), np.arange(0.00005,0.001,0.00005)],
 #         [np.arange(0.001,0.025,0.001), np.arange(0.0005,0.015,0.0005)]]
 # 23,24,25
+# taus = [[np.arange(0.1,0.205,0.005), np.arange(0.0005,0.01,0.0005)],
+#         [np.arange(0.05,0.2,0.01), np.arange(0.0005,0.01,0.0005)],
+#         [np.arange(0.001,0.1,0.005), np.arange(0.0025,0.05,0.0025)]]
+# 37
+taus = [[np.arange(0.3,0.6,0.01), np.arange(0.001,0.01,0.001)],
+        [np.arange(0.2,0.6,0.01), np.arange(0.001,0.01,0.001)],
+        [np.arange(0.1,0.3,0.01), np.arange(0.005,0.05,0.005)]]
+
+##comix3 1 ^ / switch to c2 for c3 from 6
 taus = [[np.arange(0.1,0.205,0.005), np.arange(0.0005,0.01,0.0005)],
         [np.arange(0.05,0.2,0.01), np.arange(0.0005,0.01,0.0005)],
         [np.arange(0.001,0.1,0.005), np.arange(0.0025,0.05,0.0025)]]
 
-##comix3 1 ^ / switch to c2 for c3 from 6
 
 
 for i, data in enumerate(datas):
@@ -66,6 +74,6 @@ for i, data in enumerate(datas):
         # result = nd_p.build_network(n,partitions,contact_matrix,params,model)
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[1][j],prop_infec=10/n, scaling=scales[j])
         # print(sum(result['degrees']))
-        with open(f'output_data/sims/8_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/37_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')
