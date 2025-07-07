@@ -199,6 +199,7 @@ fn gmm_sims(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: u
         // Create output PyDict
         let dict = PyDict::new_bound(py);
         
+        dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("r0_1", r01.to_object(py))?;
         dict.set_item("r0_23", r023.to_object(py))?;
         dict.set_item("final_size", final_size.to_object(py))?;
