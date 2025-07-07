@@ -1,7 +1,7 @@
 import nd_python_avon as nd_p 
 import numpy as np
 import json
-n, iters = 100_000, 48
+n, iters = 100_000, 30
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -83,7 +83,7 @@ for i, data in enumerate(datas):
         #     result['zeros'].append(len([a for a in network['degrees'] if a == 0]))
         #     result['avg_degree'].append(np.mean([a for a in network['degrees']]))
         #     result['max_degree'].append(max([a for a in network['degrees']]))
-        result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=5,iterations=iters, taus=taus[i],prop_infec=10/n, scaling=scales[j])
-        with open(f'output_data/sims/51_{data}_{model}_{scales[j]}.json','w') as f:
+        result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[i],prop_infec=10/n, scaling=scales[j])
+        with open(f'output_data/sims/52_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')
