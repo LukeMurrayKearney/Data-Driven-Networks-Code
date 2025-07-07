@@ -82,6 +82,6 @@ for i, data in enumerate(datas):
         # result = nd_p.build_network(n,partitions,contact_matrix,params,model)
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[i],prop_infec=10/n, scaling=scales[j])
         # print(sum(result['degrees']))
-        with open(f'output_data/sims/53_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/54_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')
