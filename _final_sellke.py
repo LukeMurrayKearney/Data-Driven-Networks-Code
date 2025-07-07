@@ -2,7 +2,7 @@ import nd_python_avon as nd_p
 import numpy as np
 import json
 
-n, iters = 100_000, 30
+n, iters = 50_000, 30 #55
 
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -82,6 +82,6 @@ for i, data in enumerate(datas):
         # result = nd_p.build_network(n,partitions,contact_matrix,params,model)
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[i],prop_infec=10/n, scaling=scales[j])
         # print(sum(result['degrees']))
-        with open(f'output_data/sims/54_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/55_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')
