@@ -39,6 +39,9 @@ taus = [np.arange(0.01,0.4,0.01),
 taus = [np.arange(0.35,0.6,0.01),
         np.arange(0.3,0.7,0.01)]
 
+# 4
+taus = [np.arange(0.3,2,0.05),
+        np.arange(0.5,2,0.05)]
 
 for i, data in enumerate(datas):
     for j, model in enumerate(models):
@@ -67,6 +70,6 @@ for i, data in enumerate(datas):
             
             result = nd_p.gmm_sims(samples,partitions=partitions,taus=taus[i], iterations=iters, inv_gamma=7, prop_infec=10/n, scaling=scales[j])
                 
-            with open(f'output_data/gmm/{4}_{k}_{data}_{model}_scale.json','w') as f:
+            with open(f'output_data/gmm/4_{k}_{data}_{model}_scale.json','w') as f:
                 json.dump(result, f)
 print('done')
