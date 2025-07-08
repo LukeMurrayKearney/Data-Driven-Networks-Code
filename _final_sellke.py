@@ -9,7 +9,8 @@ buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
 
 # datas = ['comix1','comix2','poly']
-datas = ['comix1','comix2','comix3','poly']
+# datas = ['comix1','comix2','comix3','poly']
+datas = ['comix3']
 models = ['sbm','dpln']
 scales = ['none', 'none']
 
@@ -57,12 +58,14 @@ taus = [[np.arange(0.1,0.205,0.005), np.arange(0.0005,0.01,0.0005)],
 ## comix3 9 and up
 taus = [[np.arange(0.01,0.5,0.01)]]
 
-## 4
+## 50+
 taus = [np.arange(0.3,2,0.1),
         np.arange(0.2,2,0.1),
         np.arange(0.4,2,0.1),
         np.arange(0.1,1,0.1)]
 
+## 100 + fix comix3 sbm
+taus = [np.arange(0.01,0.1,0.005)]
 
 
 for i, data in enumerate(datas):
@@ -82,6 +85,6 @@ for i, data in enumerate(datas):
         # result = nd_p.build_network(n,partitions,contact_matrix,params,model)
         result = nd_p.big_sellke_sims(partitions=partitions,contact_matrix=contact_matrix,network_params=params,n=n,dist_type=model,num_networks=1,iterations=iters, taus=taus[i],prop_infec=10/n, scaling=scales[j])
         # print(sum(result['degrees']))
-        with open(f'output_data/sims/57_{data}_{model}_{scales[j]}.json','w') as f:
+        with open(f'output_data/sims/100_{data}_{model}_{scales[j]}.json','w') as f:
             json.dump(result, f)
 print('done')

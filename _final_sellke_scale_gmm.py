@@ -39,7 +39,7 @@ taus = [np.arange(0.01,0.4,0.01),
 taus = [np.arange(0.35,0.6,0.01),
         np.arange(0.3,0.7,0.01)]
 
-# 4
+# 4 c1 and c3
 taus = [np.arange(0.3,2,0.05),
         np.arange(0.5,2,0.05)]
 
