@@ -31,10 +31,13 @@ def main():
     print(data, model)
     error, error_breakdown = [], []
     # error_with_itself, error_with_itself_breakdown = [], []
+    # contact_matrix = np.genfromtxt(f'input_data/contact_matrices/contact_matrix_{data}.csv', delimiter=',')
+    # params = np.genfromtxt(f'input_data/parameters/params_{data}_{model}.csv', delimiter=',')
+    
+    with open(f'input_data/egos/{data}.json','r') as f:
+        egos = json.load(f)
     contact_matrix = np.genfromtxt(f'input_data/contact_matrices/contact_matrix_{data}.csv', delimiter=',')
     params = np.genfromtxt(f'input_data/parameters/params_{data}_{model}.csv', delimiter=',')
-    with open(f'input_data/egos/{data}_{model}.json', 'r') as f:
-        egos = json.load(f)
         
     for i in range(iters):
         # my model error
@@ -54,7 +57,7 @@ def main():
         # error_with_itself_breakdown.append(errors)
         # error_with_itself.append(err_pp)
         
-    with open(f'../output_data/errors/breakdown_{data}_{model}.csv', 'w', newline='') as file:
+    with open(f'output_data/errors/breakdown_{data}_{model}.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         for row in error_breakdown:
             writer.writerow(row)
@@ -64,7 +67,7 @@ def main():
     #     for row in error_with_itself_breakdown:
     #         writer.writerow(row)
 
-    with open(f'../output_data/errors/{data}_{model}.csv', 'w', newline='') as file:
+    with open(f'output_data/errors/{data}_{model}.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(error)
 
