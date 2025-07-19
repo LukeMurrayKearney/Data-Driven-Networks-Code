@@ -2,7 +2,7 @@ use std::os::linux::net;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use rayon::prelude::*;
+use rayon::{iter, prelude::*};
 use crate::dpln::{pdf, sample};
 use crate::network_structure::NetworkStructure;
 
@@ -72,6 +72,47 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 
 
 //////////////////////////////////////////// outbreak simulation //////////////////////////////////////
+
+#[pyfunction]
+fn get_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
+
+    let mut r0 = vec![vec![0.; iterations]]; 
+    // let (mut ts, mut sirs) = (Vec::new(), Vec::new());
+    // parallel simulations
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
+        let properties = network_properties::NetworkProperties::new(&network, &cur_params);
+
+        let results: Vec<f64>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::r0_sellke(&network, &mut properties.clone(), prop_infec, scaling)
+                })
+                .collect();
+        for (k, &sim) in results.iter().enumerate() {
+            r0[i][k] = sim;
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("r0", r0.to_object(py))?;
+        // dict.set_item("t", ts.to_object(py))?;
+        // dict.set_item("sir", sirs.to_object(py))?;
+        
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
 
 #[pyfunction]
 fn big_sellke_sec_cases(taus: Vec<f64>, networks: usize, iterations: usize, n: usize, partitions: Vec<usize>, dist_type: &str, network_params: Vec<Vec<f64>>, contact_matrix: Vec<Vec<f64>>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
@@ -481,6 +522,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fit_dpln, m)?)?;
     m.add_function(wrap_pyfunction!(small_sellke, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke, m)?)?;
+    m.add_function(wrap_pyfunction!(get_r0, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_growth_rate, m)?)?;
