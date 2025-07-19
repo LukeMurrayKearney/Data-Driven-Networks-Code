@@ -122,7 +122,7 @@ pub fn r0_sellke(network_structure: &NetworkStructure, network_properties: &mut 
 
     // start while loop 
     let mut cur_min_gen = 0;
-    while I_cur.len() > 1 || cur_min_gen < 3 {
+    while I_cur.len() > 0 || cur_min_gen < 3 {
         // get the minimum recovery time
         // println!("\nlength of R = {:?}", recovery_times.len());
         let (min_index_vec, min_index_node, min_r) = recovery_times
