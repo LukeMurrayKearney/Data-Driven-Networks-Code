@@ -76,7 +76,7 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 #[pyfunction]
 fn get_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
 
-    let mut r0 = vec![vec![0.; iterations]]; 
+    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     // let (mut ts, mut sirs) = (Vec::new(), Vec::new());
     // parallel simulations
 
