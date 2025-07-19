@@ -253,7 +253,9 @@ pub fn r0_sellke(network_structure: &NetworkStructure, network_properties: &mut 
                 update_sir(&mut sir, true);
                 // update_sir_ages(&mut sir_ages, true, network_structure.ages[first_infection]);
                 update_ct(&mut ct, &network_structure, true, first_infection, scaling,&scale_params);
-                cur_min_gen = I_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
+                if I_cur.len() > 0 {
+                    cur_min_gen = I_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
+                }
             }
         }
         // println!("t = \n{:?}",t);
