@@ -105,6 +105,7 @@ fn get_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usi
         let dict = PyDict::new_bound(py);
         
         dict.set_item("r0", r0.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;
         // dict.set_item("t", ts.to_object(py))?;
         // dict.set_item("sir", sirs.to_object(py))?;
         

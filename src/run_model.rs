@@ -8,6 +8,7 @@ use rand_distr::{Binomial, Distribution, WeightedIndex};
 use rayon::prelude::*;
 use statrs::statistics::Statistics;
 use std::cmp;
+use std::os::unix::net;
 use ndarray::{Array1, ArrayBase};
 
 // pub struct ScaleParams {
@@ -264,7 +265,7 @@ pub fn r0_sellke(network_structure: &NetworkStructure, network_properties: &mut 
     // println!("I_cur = {:?}\nI_events = {:?}\nR_events = {:?}\n", I_cur, I_events, R_events);
     // println!("t = {:?}",t);
     // println!("{:?}", sir.last().unwrap());
-    let sc: Vec<usize> = R_events.iter().filter(|&&x| x >= 0).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     if cur_min_gen >= 3 {(sc.iter().sum::<usize>() as f64)/(sc.len() as f64)} else {-1.}
 }
 
