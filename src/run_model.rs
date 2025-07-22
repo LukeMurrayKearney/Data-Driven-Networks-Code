@@ -474,7 +474,7 @@ pub fn fs_sellke(network_structure: &NetworkStructure, network_properties: &mut 
     // println!("I_cur = {:?}\nI_events = {:?}\nR_events = {:?}\n", I_cur, I_events, R_events);
     // println!("t = {:?}",t);
     // println!("{:?}", sir.last().unwrap());
-    if cur_min_gen >= 3 {(network_properties.nodal_states.iter().filter(|&&x| x == State::Recovered).collect::<Vec<&State>>().len() as f64)/(network_structure.ages.len() as f64)} else {-1.}
+    if cur_min_gen >= 3 {(I_events.iter().filter(|&&x| x >= 0).collect::<Vec<&i64>>().len() as f64)/(network_structure.ages.len() as f64)} else {-1.}
 }
 
 pub fn run_sellke(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: f64, scaling: &str) 
