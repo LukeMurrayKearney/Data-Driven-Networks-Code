@@ -89,7 +89,125 @@ pub fn cleanup_single(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>
     }
 
     (edge_list, source, target)
+}
+
+pub fn cleanup_diag(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>, old_edges: &Vec<(usize, usize)>, rng: &mut ThreadRng) -> 
+    (Vec<(usize, usize)>, Vec<(usize, usize)>, Vec<(usize, usize)>) {
+    
+    // order and remove zeros
+    let mut edge_list: Vec<(usize, usize)> = Vec::new();
+    let mut source: Vec<(usize, usize)> = source
+        .iter()
+        .filter(|(_, x)| *x != 0)
+        .map(|(i,x)| (*i, *x))
+        .collect();
+    source.sort_by(|a,b| b.1.cmp(&a.1));
+
+    let mut target: Vec<(usize, usize)> = target
+        .iter()
+        .filter(|(_, x)| *x != 0)
+        .map(|(i,x)| (*i, *x))
+        .collect();
+
+
+    // while source.len() > 0 && target.len() > 0  {
+    //     edge_list.push(connect_stub(&mut source, &mut target, rng));
+    // } 
+
+    // new code
+    while source.len() > 0 && target.len() > 0  {
+        // find edges which are already connected to source
+        let remove_new: Vec<usize> = edge_list.clone()
+            .into_iter()
+            .filter(|&(a, b)| a == source[0].0 || b == source[0].0)
+            .flat_map(|(a, b)| vec![a, b])
+            .filter(|&x| x != source[0].0)
+            .collect();
+        // remove already connected edges from contention
+        let tmp_target1: Vec<(usize, usize)> = target
+            .iter()
+            .filter(|(i, _)| !remove_new.contains(i))
+            .map(|x| x.to_owned())
+            .collect();
+        let remove_old: Vec<usize> = old_edges.clone()
+            .into_iter()
+            .filter(|&(a, b)| a == source[0].0 || b == source[0].0)
+            .flat_map(|(a, b)| vec![a, b])
+            .filter(|&x| x != source[0].0)
+            .collect();
+        // remove already connected edges from contention
+        let tmp_target: Vec<(usize, usize)> = tmp_target1
+            .iter()
+            .filter(|(i, _)| !remove_old.contains(i) && i.to_owned() != source[0].0)
+            .map(|x| x.to_owned())
+            .collect();
+
+
+        match tmp_target.is_empty() {
+            true => {
+                // remove source if no target
+                source.remove(0);
+            },
+            false => {
+                let i = rng.gen_range(0..tmp_target.len());
+                edge_list.push((source[0].0, tmp_target[i].0));
+                // index of target in original list
+                let index = tmp_target
+                    .iter()
+                    .position(|x| x.0 == tmp_target[i].0)
+                    .unwrap();
+                //reduce or delete target
+                match tmp_target[i].1 {
+                    0..=1 => {
+                        target.remove(index);
+                    },
+                    _ => {
+                        target[index].1 -= 1;
+                    }
+                }
+                //reduce or delete index node
+                match source[0].1 {
+                    0..=1 => {
+                        source.remove(0);
+                    },
+                    _ => {
+                        source[0].1 -= 1;
+                    }
+                }
+                move_element(&mut source);
+                // extra line because source and target are the same set
+                let cur_index = tmp_target
+                    .iter()
+                    .position(|x| x.0 == source[0].0);
+                if let Some(idx) = cur_index {
+                    match idx {
+                        0..=1 => {
+                            target.remove(idx);
+                        },
+                        _ => {
+                            target[idx].1 -= 1;
+                        }
+                    }
+                }
+                let cur_index = source
+                    .iter()
+                    .position(|x| x.0 == target[index].0);
+                if let Some(idx) = cur_index {
+                    match idx {
+                        0..=1 => {
+                            source.remove(idx);
+                        },
+                        _ => {
+                            source[idx].1 -= 1;
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    (edge_list, source, target)
+}
 
 
 pub fn cleanup_double(source: &Vec<(usize, usize)>, target1: &Vec<(usize, usize)>, target2: &Vec<(usize, usize)>, rng: &mut ThreadRng) -> 
@@ -137,6 +255,114 @@ pub fn cleanup_double(source: &Vec<(usize, usize)>, target1: &Vec<(usize, usize)
                     },
                     _ => {
                         edge_list.push(connect_stub(&mut source, &mut target1, rng));
+                    }
+                }
+            }
+        } 
+
+    (edge_list, source, target1, target2)
+}
+
+pub fn cleanup_diag_double(source: &Vec<(usize, usize)>, target1: &Vec<(usize, usize)>, target2: &Vec<(usize, usize)>, rng: &mut ThreadRng) -> 
+    (Vec<(usize, usize)>, Vec<(usize, usize)>, Vec<(usize, usize)>, Vec<(usize, usize)>) {
+        // order and remove zeros
+        let mut edge_list: Vec<(usize, usize)> = Vec::new();
+        let mut source: Vec<(usize, usize)> = source
+            .iter()
+            .filter(|(_, x)| *x != 0)
+            .map(|(i,x)| (*i, *x))
+            .collect();
+        source.sort_by(|a,b| b.1.cmp(&a.1));
+
+        // target one is the same as source !
+        let mut target1: Vec<(usize, usize)> = target1
+            .iter()
+            .filter(|(_, x)| *x != 0)
+            .map(|(i,x)| (*i, *x))
+            .collect();
+        // target1.sort_by(|a,b| b.1.cmp(&a.1));
+
+        let mut target2: Vec<(usize, usize)> = target2
+            .iter()
+            .filter(|(_, x)| *x != 0)
+            .map(|(i,x)| (*i, *x))
+            .collect();
+        // target2.sort_by(|a,b| b.1.cmp(&a.1));
+
+        while source.len() > 0 && (target1.len() > 0 || target2.len() > 0) {
+            if target1.len() > 0 && target2.len() > 0 {
+                let neighbour: usize = rng.gen_range(0..=1);
+                match neighbour {
+                    0 => {
+                        let link = connect_stub(&mut source, &mut target1, rng);
+                        let cur_index = target1
+                            .iter()
+                            .position(|x| x.0 == source[0].0);
+                        if let Some(idx) = cur_index {
+                            match idx {
+                                0..=1 => {
+                                    target1.remove(idx);
+                                },
+                                _ => {
+                                    target1[idx].1 -= 1;
+                                }
+                            }
+                        }
+                        let cur_index = source
+                            .iter()
+                            .position(|x| x.0 == target1[link.1].0);
+                        if let Some(idx) = cur_index {
+                            match idx {
+                                0..=1 => {
+                                    source.remove(idx);
+                                },
+                                _ => {
+                                    source[idx].1 -= 1;
+                                }
+                            }
+                        }
+                        edge_list.push(link);
+                    },
+                    1 => {
+                        edge_list.push(connect_stub(&mut source, &mut target2, rng));
+                    },
+                    _ => {println!("oh no")}
+                }
+            }
+            else {
+                match target1.len() {
+                    0 => {
+                        edge_list.push(connect_stub(&mut source, &mut target2, rng));
+                    },
+                    _ => {
+                        let link = connect_stub(&mut source, &mut target1, rng);
+                        let cur_index = target1
+                            .iter()
+                            .position(|x| x.0 == source[0].0);
+                        if let Some(idx) = cur_index {
+                            match idx {
+                                0..=1 => {
+                                    target1.remove(idx);
+                                },
+                                _ => {
+                                    target1[idx].1 -= 1;
+                                }
+                            }
+                        }
+                        let cur_index = source
+                            .iter()
+                            .position(|x| x.0 == target1[link.1].0);
+                        if let Some(idx) = cur_index {
+                            match idx {
+                                0..=1 => {
+                                    source.remove(idx);
+                                },
+                                _ => {
+                                    source[idx].1 -= 1;
+                                }
+                            }
+                        }
+                        edge_list.push(link);
                     }
                 }
             }

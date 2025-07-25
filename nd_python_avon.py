@@ -15,6 +15,10 @@ from scipy.optimize import minimize
 plt.rcParams.update({'font.size': 14})  # Adjust the font size
 
 ################################## build into a package ##################################
+def gmm_network(degree_dist, partitions):
+    partitions = [int(a) for a in partitions]
+    return nd_r.network_from_source_and_targets(partitions, degree_dist)
+
 def gmm_fs(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3, scaling="None"):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0,inv_gamma]
