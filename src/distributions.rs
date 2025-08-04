@@ -47,6 +47,16 @@ pub fn create_frequency_distribution(adjacency_matrix: &Vec<Vec<(usize, usize)>>
     return frequency_distribution
 }
 
+pub fn create_frequency_distribution_dur(adjacency_matrix: &Vec<Vec<(usize, usize, usize)>>, ages: &Vec<usize>, num_durs: usize) -> Vec<Vec<Vec<usize>>> {
+    let mut frequency_distribution: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_durs]; ages.last().unwrap() + 1]; ages.len()];
+    for (i, ego) in adjacency_matrix.iter().enumerate() {
+        for (_, contact_idx, duration) in ego.iter() {
+            frequency_distribution[i][ages[*contact_idx]][*duration] += 1;
+        }
+    }
+    return frequency_distribution
+}
+
 pub fn nbinom_sample(r: f64, p: f64, rng: &mut ThreadRng) -> usize {
     // Sample from the Gamma Distribution 
     let gamma = Gamma::new(r, p/(1.0-p)).unwrap();

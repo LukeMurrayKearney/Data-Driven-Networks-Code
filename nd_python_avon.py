@@ -15,6 +15,11 @@ from scipy.optimize import minimize
 plt.rcParams.update({'font.size': 14})  # Adjust the font size
 
 ################################## build into a package ##################################
+def gmm_dur(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0,inv_gamma]
+    return nd_r.sellke_dur(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec)
+
 def gmm_network(degree_dist, partitions):
     partitions = [int(a) for a in partitions]
     return nd_r.network_from_source_and_targets(partitions, degree_dist)
@@ -66,23 +71,37 @@ def mcmc(data, days, partitions, contact_matrix, network_params, outbreak_params
     partitions = [int(a) for a in partitions]
     return nd_r.mcmc_data(data=data, days=days, tau_0=tau_0, proportion_hosp=p_hosp, iters=iters, dist_type=dist_type, n=n, partitions=partitions, contact_matrix=contact_matrix, network_params=network_params, outbreak_params=outbreak_params, prior_param=prior_param,scaling=scaling)
 
-def fit_to_data(df = None, input_file_path = 'input_data/poly.csv', dist_type = "nbinom", buckets = np.array([5,12,18,30,40,50,60,70]), save_fig = True, output_file_path=None, log=False, to_csv=False, fig_data_file='',num_bins=15):
+def fit_to_data(df = None, input_file_path = 'input_data/poly.csv', dist_type = "nbinom", buckets = np.array([5,12,18,30,40,50,60,70]), save_fig = True, output_file_path=None, log=False, to_csv=False, fig_data_file='',num_bins=15, duration=False):
 
     # Call the function with the provided arguments
     if df is None:
         df = read_in_dataframe(input_file_path)
     
     # Create list of ego networks from data
-    egos = make_egos_list(df=df, buckets=buckets)
+    egos = make_egos_list(df=df, buckets=buckets, duration=duration)
     
     # Create Contact Matrices
-    contact_matrix, num_per_bucket = make_contact_matrices(egos=egos, buckets=buckets)
+    contact_matrix, num_per_bucket = make_contact_matrices(egos=egos, duration=duration)
     
     # fit to the ego networks for each age bracket
     params = fit_dist(egos, dist_type, buckets, num_per_bucket, save_fig=save_fig, file_path=output_file_path, log=log,to_csv=to_csv,fig_data_file=fig_data_file,num_bins=num_bins)
 
     # print("Fitting complete.")
     return egos, contact_matrix, params
+
+def fit_data_duration(df=None, buckets = np.array([5,12,18,30,40,50,60,70]), input_file_path='input_data/comix3.csv'):
+    if df is None:
+        df = read_in_dataframe(input_file_path)
+        df['duration_multi'] = df['duration_multi'].astype('float')
+    
+    # Create list of ego networks from data
+    egos = make_egos_list(df=df, buckets=buckets, duration=True)
+    
+    # Create Contact Matrices
+    contact_matrix, num_per_bucket = make_contact_matrices(egos=egos, duration=True)
+    
+    return egos, contact_matrix
+        
 
 def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom"):
     partitions = [int(a) for a in partitions]
@@ -194,9 +213,9 @@ def get_bucket_index(num, buckets):
             return i
     return len(buckets)  # If the number exceeds the last bucket, put it in the last bucket
 
-def make_contact_matrices(egos,buckets):
-    num_per_bucket = np.zeros(len(buckets)+1)
-    contact_matrix = np.zeros((len(buckets)+1, len(buckets)+1))
+def make_contact_matrices(egos,duration=False):
+    num_per_bucket = np.zeros(np.max([a['age'] for a in egos])+1)
+    contact_matrix = np.zeros((np.max([a['age'] for a in egos])+1, len(egos[0]['contacts'])))
     for ego in egos:
         num_per_bucket[ego['age']] += 1
         for j, val in enumerate(ego['contacts']):
@@ -224,9 +243,10 @@ def make_contact_matrices(egos,buckets):
 #     contact_matrix = np.divide(contact_matrix.T, num_per_bucket).T
 #     return contact_matrix, num_per_bucket
 
-def make_egos_list(df, buckets):
+def make_egos_list(df, buckets, duration=False):
     egos = []
     last = ''
+    num_dur = int(np.max(df['duration_multi'][~np.isnan(df['duration_multi'])])) if duration==True else 1
     # iterate through each contact
     for _, x in df.iterrows():
         if x['part_id'] == last:
@@ -234,15 +254,19 @@ def make_egos_list(df, buckets):
                 continue
             else:
                 j = get_bucket_index(x['cnt_age_exact'], buckets=buckets)
-                egos[-1]['contacts'][j] += 1
+                k = x['duration_multi']
+                k = 1 if np.isnan(k) else int(k)
+                egos[-1]['contacts'][j*num_dur + k-1] += 1
         else:
             i = get_bucket_index(x['part_age'], buckets=buckets)
-            egos.append({'age': i, 'contacts': np.zeros(len(buckets) + 1), 'degree': 0})
+            k = x['duration_multi']
+            k = 1 if np.isnan(k) else int(k)
+            egos.append({'age': i, 'contacts': np.zeros((len(buckets) + 1)*num_dur), 'degree': 0})
             if np.isnan(x['cnt_age_exact']):
                 continue
             else:
                 j = get_bucket_index(x['cnt_age_exact'], buckets=buckets)
-                egos[-1]['contacts'][j] += 1
+                egos[-1]['contacts'][j*num_dur + k-1] += 1
         last = x['part_id']
 
     # count degree of each node
@@ -253,10 +277,12 @@ def make_egos_list(df, buckets):
     
     return egos
 
+
+
 def fit_dist(egos, dist_type, buckets, num_per_bucket, save_fig=False, file_path=None, log=False, to_csv=False, fig_data_file='', num_bins=15):
     params = []
     # plotting
-    num_subplots = len(num_per_bucket)
+    num_subplots = len(num_per_bucket) if duration == False else len(egos[0]['contacts'])
     num_cols = int(math.ceil(math.sqrt(num_subplots)))
     num_rows = int(math.ceil(num_subplots / num_cols))
     if save_fig:
@@ -271,9 +297,9 @@ def fit_dist(egos, dist_type, buckets, num_per_bucket, save_fig=False, file_path
           
     elif dist_type == "dpln":
         for i, num in enumerate(cumulative_num_per):
-            if i == 0: 
+            if i == 0:
                 contacts = egos[0:int(num)]
-            else: 
+            else:
                 contacts = egos[int(cumulative_num_per[i-1]):int(num)]
             # minimise negative log likelihood to find distribution fit to the data
             contacts = [a['degree']+1 for a in contacts]
@@ -326,7 +352,7 @@ def log_likelihood_nbinom(params, egos):
     return -np.sum(log_likelihood)
 
 
-def plot_degree_dist_fit(contacts, buckets, params = None, idx = 0, ax = plt.gca(), dist_type = "nbinom", num_rows=1, num_cols=1, log=False, num_bins=15, to_csv=False,graph_file=''):
+def plot_degree_dist_fit(contacts, buckets, params = None, idx = 0, ax = plt.gca(), dist_type = "nbinom", num_rows=1, num_cols=1, log=False, num_bins=15, to_csv=False,graph_file='',duration=False):
     
     if dist_type != "dpln":
         contacts = [a['degree'] for a in contacts]
@@ -386,12 +412,21 @@ def plot_degree_dist_fit(contacts, buckets, params = None, idx = 0, ax = plt.gca
     if idx in np.arange(num_cols*num_rows - num_cols, num_cols*num_rows + 1, 1):
         ax[idx].set_xlabel("Number of contacts")
     ax[idx].legend()
-    if idx == 0:
-        ax[idx].set_title(f'{0}-{buckets[idx]-1}')
-    elif idx == len(buckets):
-        ax[idx].set_title(f'{buckets[idx-1]}+')
-    else: 
-        ax[idx].set_title(f'{buckets[idx-1]}-{buckets[idx]-1}')
+    if duration:
+        num_dur = len(contacts[0]['contacts'])//len(buckets)
+        if idx // num_dur == 0:
+            ax[idx].set_title(f'{0}-{buckets[idx]-1}: {idx%num_dur}')
+        elif idx == len(contacts[0]['contacts'])-1:
+            ax[idx].set_title(f'{buckets[-2]}: {idx%num_dur}')
+        else:
+            ax[idx].set_title(f'{buckets[idx//num_dur]}-{buckets[idx//num_dur]-1}: {idx%num_dur}')
+    else:
+        if idx == 0:
+            ax[idx].set_title(f'{0}-{buckets[idx]-1}')
+        elif idx == len(buckets):
+            ax[idx].set_title(f'{buckets[idx-1]}+')
+        else: 
+            ax[idx].set_title(f'{buckets[idx-1]}-{buckets[idx]-1}')
 
       
 def log_bins(x, num_bins=5):

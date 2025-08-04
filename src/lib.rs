@@ -74,6 +74,47 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 //////////////////////////////////////////// outbreak simulation //////////////////////////////////////
 
 #[pyfunction]
+fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64) -> PyResult<Py<PyDict>> {
+
+    let num_dur = 5;
+    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
+    let mut fs = vec![vec![0.; iterations];taus.len()]; 
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        let results: Vec<(f64,f64,f64)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, num_dur)
+                })
+                .collect();
+        for (k, &sim) in results.iter().enumerate() {
+            fs[i][k] = sim.0; r0[i][k] = sim.1; 
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("fs", fs.to_object(py))?;
+        dict.set_item("r0", r0.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;
+    
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+
+#[pyfunction]
 fn get_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
 
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
@@ -491,7 +532,7 @@ fn small_sellke(n: usize, adjacency_matrix: Vec<Vec<(usize,usize)>>, ages: Vec<u
         degrees: adjacency_matrix.iter().map(|x| x.len()).collect(),
         ages: ages,
         frequency_distribution: Vec::new(),
-        partitions: partitions
+        partitions: partitions,
     };
     let mut properties = network_properties::NetworkProperties::new(&network, &outbreak_params);
     let (t, I_events, R_events, sir, secondary_cases, generations, infected_by) = run_model::run_sellke(&network, &mut properties.clone(), prop_infec, scaling);
@@ -566,6 +607,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(big_sellke, m)?)?;
     m.add_function(wrap_pyfunction!(get_r0, m)?)?;
     m.add_function(wrap_pyfunction!(get_fs, m)?)?;
+    m.add_function(wrap_pyfunction!(sellke_dur, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_growth_rate, m)?)?;

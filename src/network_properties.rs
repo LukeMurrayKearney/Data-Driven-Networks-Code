@@ -1,4 +1,4 @@
-use crate::network_structure::NetworkStructure;
+use crate::network_structure::{NetworkStructure, NetworkStructureDuration};
 use crate::run_model::{scale_fit, ScaleParams};
 use rand::distributions::WeightedIndex;
 use rand::seq::SliceRandom;
@@ -33,6 +33,16 @@ impl NetworkProperties {
         }
     }
 
+    pub fn new_dur(network: &NetworkStructureDuration, params: &Vec<f64>) -> NetworkProperties {
+        NetworkProperties {
+            nodal_states: vec![State::Susceptible; network.degrees.len()],
+            parameters: params.clone(),
+            secondary_cases: vec![0; network.degrees.len()],
+            generation: vec![0; network.degrees.len()],
+            disease_from: vec![-1; network.degrees.len()],
+        }
+    }
+
     pub fn initialize_infection_sellke_rand(&mut self, proportion_of_population: f64) {
 
         let number_of_infecteds: usize = match proportion_of_population as usize {
@@ -53,6 +63,41 @@ impl NetworkProperties {
 
         // infect selected individuals
         for &i in indicies.iter().take(number_of_infecteds) {
+            self.nodal_states[i] = State::Infected(0);
+            // self.nodal_states[i] = State::Infected(poisson_infectious_period.sample(&mut rng).round() as usize);
+            self.generation[i] = 1;
+        }
+    }
+
+    pub fn initialize_infection_sellke_dur(&mut self, network: &NetworkStructureDuration, proportion_of_population: f64) {
+
+        let number_of_infecteds: usize = match proportion_of_population as usize {
+            0..=1 => {
+                ((self.nodal_states.len() as f64) * proportion_of_population) as usize
+            },
+            _ => {
+                println!("The proportion infected must be between 0 and 1");
+                0
+            }
+        };
+        // define random number generator
+        let mut rng = rand::thread_rng();
+
+        
+        //we want a weighted sampling of the population
+        let probabilities: Vec<f64> = network.degrees
+            .iter()
+            .map(|x| {
+                x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * dur_to_mins(dur_index+1)).sum()
+            })
+            .collect();
+
+        // weighted index of each individual
+        let dist = WeightedIndex::new(probabilities).unwrap();
+        let selected: Vec<usize> = (0..number_of_infecteds).map(|_| dist.sample(&mut rng)).collect();
+
+        // infect selected individuals
+        for &i in selected.iter() {
             self.nodal_states[i] = State::Infected(0);
             // self.nodal_states[i] = State::Infected(poisson_infectious_period.sample(&mut rng).round() as usize);
             self.generation[i] = 1;
@@ -267,3 +312,14 @@ impl NetworkProperties {
     }
 }
 
+fn dur_to_mins(duration: usize) -> f64 {
+
+    match duration {
+        1 => 2.5,
+        2 => 10.,
+        3 => 37.5,
+        4 => 150.,
+        5 => 840.,
+        _ => 2.5
+    }
+}
