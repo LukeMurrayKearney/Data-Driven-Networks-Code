@@ -79,6 +79,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
     let num_dur = 5;
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
+    let mut avg_d = vec![0.;taus.len()]; 
 
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
@@ -86,6 +87,8 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
         cur_params[0] = tau;
         let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
 
         let results: Vec<(f64,f64,f64)>
             = (0..iterations)
@@ -107,6 +110,8 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
         dict.set_item("fs", fs.to_object(py))?;
         dict.set_item("r0", r0.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
+        dict.set_item("avg_d_network", avg_d.to_object(py))?;
+        dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
     
         // Convert dict to PyObject and return
         Ok(dict.into())
