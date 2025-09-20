@@ -15,6 +15,27 @@ mod run_model;
 
 ////////////////////////////////////////////// Network Creation ////////////////////////////////////////
 
+#[pyfunction]
+fn network_dur(degree_age_breakdown: Vec<Vec<usize>>, partitions: Vec<usize>, num_dur: usize) -> PyResult<Py<PyDict>> {
+
+    let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
 //  Creates a netwrok from given source and targets
 #[pyfunction]
 fn network_from_source_and_targets(partitions: Vec<usize>, degree_dist: Vec<Vec<usize>>) -> PyResult<Py<PyDict>>  {
@@ -74,9 +95,8 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 //////////////////////////////////////////// outbreak simulation //////////////////////////////////////
 
 #[pyfunction]
-fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64) -> PyResult<Py<PyDict>> {
-
-    let num_dur = 5;
+fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize) -> PyResult<Py<PyDict>> {
+    
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
@@ -529,8 +549,7 @@ fn small_sellke(n: usize, adjacency_matrix: Vec<Vec<(usize,usize)>>, ages: Vec<u
         partitions[age] += 1;
     }
     partitions.iter_mut().fold(0usize, |acc, x| {
-        *x += acc;
-        *x
+        *x + acc
     });
     let network = NetworkStructure{
         adjacency_matrix: adjacency_matrix.clone(),
@@ -602,6 +621,7 @@ pub fn dpln_pdf(xs: Vec<f64>, network_params: Vec<f64>) -> Vec<f64> {
 /// import the module.
 #[pymodule]
 fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(network_dur, m)?)?;
     m.add_function(wrap_pyfunction!(network_from_source_and_targets, m)?)?;
     m.add_function(wrap_pyfunction!(network_from_vars, m)?)?;
     m.add_function(wrap_pyfunction!(sbm_from_vars, m)?)?;

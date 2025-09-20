@@ -7,6 +7,7 @@ use statrs::distribution::{Continuous, Exp, Geometric, Normal, Uniform};
 use rand_distr::{Binomial, Distribution, WeightedIndex};
 use rayon::prelude::*;
 use statrs::statistics::Statistics;
+use core::num;
 use std::cmp;
 use std::os::unix::net;
 use ndarray::{Array1, ArrayBase};
@@ -91,7 +92,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     let mut ct = Array1::<f64>::zeros(n);
     // base infection pressure proportion ct on adjacency matrix 
     for &person in I_cur.iter() {
-        update_ct_dur(&mut ct, network_structure, true, person);
+        update_ct_dur(&mut ct, network_structure, true, person,num_dur);
     }
     
     // define infection periods
@@ -159,7 +160,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
             // update_sir_ages(&mut sir_ages, false, network_structure.ages[min_index_node]);
             La_t = Laprop.clone();
             // update ct 
-            update_ct_dur(&mut ct, &network_structure, false, min_index_node);
+            update_ct_dur(&mut ct, &network_structure, false, min_index_node,num_dur);
         }
         else {
             // we may have multiple infections before a recovery,
@@ -186,7 +187,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 I_cur = I_cur.iter().filter(|&&x| x != min_index_node).map(|&x| x).collect::<Vec<usize>>();
                 update_sir(&mut sir, false);
                 La_t = Laprop.clone();
-                update_ct_dur(&mut ct, &network_structure, false, min_index_node);
+                update_ct_dur(&mut ct, &network_structure, false, min_index_node,num_dur);
             }
             // do infection
             else {
@@ -221,7 +222,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                         // if neighbour infected
                         if I_events.contains(&(j.to_owned() as i64)) && !R_events.contains(&(j.to_owned() as i64)){
                             //let time_infec = tt - t[I_events.iter().position(|&x| x == (j as i64)).unwrap()]; // we dont actually use this because we want instantaneous neighbours 
-                            return dur_to_mins(*cur_duration)/dur_to_mins(5)
+                            return if num_dur == 5 {dur_to_mins(*cur_duration)/dur_to_mins(5)} else {dur_to_mins3(*cur_duration)/dur_to_mins3(3)}
                         }
                         else {
                             return 0.;
@@ -245,7 +246,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 I_cur.push(first_infection);
                 update_sir(&mut sir, true);
                 // update_sir_ages(&mut sir_ages, true, network_structure.ages[first_infection]);
-                update_ct_dur(&mut ct, &network_structure, true, first_infection);
+                update_ct_dur(&mut ct, &network_structure, true, first_infection, num_dur);
                 if I_cur.len() > 0 {
                     cur_min_gen = I_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
                 }
@@ -946,15 +947,15 @@ fn update_ct(ct: &mut Array1<f64>, network: &NetworkStructure, infection: bool, 
     }
 }
 
-fn update_ct_dur(ct: &mut Array1<f64>, network: &NetworkStructureDuration, infection: bool, i: usize) {
+fn update_ct_dur(ct: &mut Array1<f64>, network: &NetworkStructureDuration, infection: bool, i: usize, num_dur: usize) {
     
     for link in network.adjacency_matrix[i].iter() {
         // we want to decide which side and if we are scaling 
         if infection == true {
-            ct[link.1] += dur_to_mins(link.2)/dur_to_mins(5);
+            ct[link.1] += if num_dur==5 {dur_to_mins(link.2)/dur_to_mins(num_dur)} else {dur_to_mins3(link.2)/dur_to_mins3(num_dur)};
         }
         else {
-            ct[link.1] -= dur_to_mins(link.2)/dur_to_mins(5); 
+            ct[link.1] -= if num_dur==5 {dur_to_mins(link.2)/dur_to_mins(num_dur)} else {dur_to_mins3(link.2)/dur_to_mins3(num_dur)}; 
         }
     }
 }
@@ -1000,5 +1001,15 @@ fn dur_to_mins(duration: usize) -> f64 {
         4 => 150.,
         5 => 480.,
         _ => 2.5
+    }
+}
+
+fn dur_to_mins3(duration: usize) -> f64 {
+
+    match duration {
+        1 => 30.,
+        2 => 150.,
+        3 => 480.,
+        _ => 30.
     }
 }

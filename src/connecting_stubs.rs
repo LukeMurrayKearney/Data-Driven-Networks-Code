@@ -1,4 +1,6 @@
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
+use rand_distr::WeightedIndex;
+use rand::distributions::Distribution;
 
 pub fn cleanup_single(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>, old_edges: &Vec<(usize, usize)>, rng: &mut ThreadRng) -> 
     (Vec<(usize, usize)>, Vec<(usize, usize)>, Vec<(usize, usize)>) {
@@ -58,7 +60,11 @@ pub fn cleanup_single(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>
                 source.remove(0);
             },
             false => {
-                let i = rng.gen_range(0..tmp_target.len());
+                // let i = rng.gen_range(0..tmp_target.len());
+                let weights: Vec<usize> = tmp_target.iter().map(|x| x.1).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng);
+
                 edge_list.push((source[0].0, tmp_target[i].0));
                 // index of target in original list
                 let index = tmp_target
@@ -149,7 +155,11 @@ pub fn cleanup_single_dur(source: &Vec<(usize, usize)>, target: &Vec<(usize, usi
                 source.remove(0);
             },
             false => {
-                let i = rng.gen_range(0..tmp_target.len());
+                // let i = rng.gen_range(0..tmp_target.len());
+                let weights: Vec<usize> = tmp_target.iter().map(|x| x.1).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng);  
+
                 edge_list.push((source[0].0, tmp_target[i].0, duration));
                 // index of target in original list
                 let index = tmp_target
@@ -240,7 +250,11 @@ pub fn cleanup_diag(source: &Vec<(usize, usize)>, target: &Vec<(usize, usize)>, 
                 source.remove(0);
             },
             false => {
-                let i = rng.gen_range(0..tmp_target.len());
+                // let i = rng.gen_range(0..tmp_target.len());
+                let weights: Vec<usize> = tmp_target.iter().map(|x| x.1).collect(); 
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng);
+
                 edge_list.push((source[0].0, tmp_target[i].0));
                 // index of target in original list
                 let index = tmp_target
@@ -328,7 +342,10 @@ pub fn cleanup_double(source: &Vec<(usize, usize)>, target1: &Vec<(usize, usize)
 
         while source.len() > 0 && (target1.len() > 0 || target2.len() > 0) {
             if target1.len() > 0 && target2.len() > 0 {
-                let neighbour: usize = rng.gen_range(0..=1);
+                // let neighbour: usize = rng.gen_range(0..=1);
+                let weights: Vec<usize> = vec![target1.iter().map(|x| x.1).sum(), target2.iter().map(|x| x.1).sum()];
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let neighbour = dist.sample(rng);
                 match neighbour {
                     0 => {
                         edge_list.push(connect_stub(&mut source, &mut target1, rng));
@@ -381,7 +398,11 @@ pub fn cleanup_double_dur(source: &Vec<(usize, usize)>, target1: &Vec<(usize, us
 
         while source.len() > 0 && (target1.len() > 0 || target2.len() > 0) {
             if target1.len() > 0 && target2.len() > 0 {
-                let neighbour: usize = rng.gen_range(0..=1);
+                // let neighbour: usize = rng.gen_range(0..=1);
+                let weights: Vec<usize> = vec![target1.iter().map(|x| x.1).sum(), target2.iter().map(|x| x.1).sum()];
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let neighbour = dist.sample(rng);
+                
                 match neighbour {
                     0 => {
                         edge_list.push(connect_stub_dur(&mut source, &mut target1, rng, duration));
@@ -550,8 +571,12 @@ pub fn connect_stubs_diagonal(degrees: &Vec<(usize, usize)>, rng: &mut ThreadRng
                 nodes.remove(0);
             },
             _ => {
-                //pick target
-                let i = rng.gen_range(1..tmp_nodes.len());
+                // // pick target randomly by nodes
+                // let i = rng.gen_range(1..tmp_nodes.len());
+                // instead we want to do this by edges 
+                let weights: Vec<usize> = tmp_nodes.iter().skip(1).map(|x| x.1).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng) + 1;
                 edge_list.push((nodes[0].0,tmp_nodes[i].0));
                 // index of target in original list
                 let index = nodes
@@ -627,7 +652,13 @@ pub fn connect_stubs(degrees1: &Vec<(usize, usize)>, degrees2: &Vec<(usize, usiz
                 degrees_a.remove(0);
             },
             false => {
-                let i = rng.gen_range(0..tmp_degrees_b.len());
+                // pick target randomly by nodes
+                // let i = rng.gen_range(0..tmp_degrees_b.len());
+                // pick target randomly by edges
+                let weights: Vec<usize> = tmp_degrees_b.iter().map(|x| x.1).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng);  
+
                 edge_list.push((degrees_a[0].0, tmp_degrees_b[i].0));
                 // index of target in original list
                 let index = degrees_b
@@ -661,6 +692,151 @@ pub fn connect_stubs(degrees1: &Vec<(usize, usize)>, degrees2: &Vec<(usize, usiz
     (edge_list, (degrees_a, degrees_b))
 }
 
+pub fn connect_stubs_diagonal_dur(degrees: &Vec<(usize, Vec<usize>)>, rng: &mut ThreadRng) -> Vec<(usize,usize,usize)> {
+
+    // order and remove zeros
+    let mut edge_list: Vec<(usize, usize, usize)> = Vec::new();
+    let mut nodes: Vec<(usize, Vec<usize>)> = degrees
+        .iter()
+        .filter(|(_, x)| x.iter().sum::<usize>() != 0)
+        .map(|(i,x)| (*i, x.clone().to_owned()))
+        .collect();
+    nodes.sort_by_key(|(_,b)| b.iter().sum::<usize>());
+
+    // go through node list from largest degree to smallest connecting and removing at each step
+    while nodes.len() > 1 {
+        let cur_dur = nodes[0].1.iter().position(|&x| x > 0).unwrap();
+        // find edges which are already connected
+        let remove: Vec<usize> = edge_list.clone()
+            .into_iter()
+            .filter(|&(a, b, _)| a == nodes[0].0 || b == nodes[0].0)
+            .flat_map(|(a, b, _)| vec![a, b])
+            .filter(|&x| x != nodes[0].0)
+            .collect();
+        // remove already connected edges from contention
+        let tmp_nodes: Vec<(usize, Vec<usize>)> = nodes
+            .iter()
+            .filter(|(i, x)| !remove.contains(i) && x[cur_dur] > 0)
+            .map(|x| x.to_owned())
+            .collect();
+        // tmp_nodes.sort_by_key(|(_, b)| b.iter().sum::<usize>());
+        // check if there are possible target nodes
+        match tmp_nodes.len() {
+            0..=1 => {
+                // set this duration to zero if no target
+                nodes[0].1[cur_dur] = 0;
+                if nodes[0].1.iter().sum::<usize>() == 0 {
+                    nodes.remove(0);
+                }
+            },
+            _ => {
+                // // pick target randomly by nodes
+                // let i = rng.gen_range(1..tmp_nodes.len());
+                // instead we want to do this by edges 
+                let weights: Vec<usize> = tmp_nodes.iter().skip(1).map(|x| x.1[cur_dur]).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng) + 1;
+                edge_list.push((nodes[0].0,tmp_nodes[i].0, cur_dur));
+                // index of target in original list
+                let index = nodes
+                    .iter()
+                    .position(|x| x.0 == tmp_nodes[i].0)
+                    .unwrap();
+                //reduce or delete target
+                nodes[index].1[cur_dur] -= 1;
+                if nodes[index].1.iter().sum::<usize>() == 0 {
+                    nodes.remove(index);
+                }
+                //reduce or delete index node
+                nodes[0].1[cur_dur] -= 1;
+                if nodes[0].1.iter().sum::<usize>() == 0 {
+                    nodes.remove(0);
+                }
+            }
+        }
+    }
+
+    edge_list
+}
+
+// do the non-diagonal case next
+pub fn connect_stubs_dur(degrees1: &Vec<(usize, Vec<usize>)>, degrees2: &Vec<(usize, Vec<usize>)>, rng: &mut ThreadRng) -> Vec<(usize,usize,usize)> {
+
+    // order and remove zeros
+    let mut edge_list: Vec<(usize, usize, usize)> = Vec::new();
+    let mut degrees_a: Vec<(usize, Vec<usize>)> = degrees1
+        .iter()
+        .filter(|(_, x)| x.iter().sum::<usize>() != 0)
+        .map(|(i,x)| (*i, x.clone().to_owned()))
+        .collect();
+    // order and remove zeros
+    let mut degrees_b: Vec<(usize, Vec<usize>)> = degrees2
+        .iter()
+        .filter(|(_, x)| x.iter().sum::<usize>() != 0)
+        .map(|(i,x)| (*i, x.clone().to_owned()))
+        .collect();
+    
+
+    // loop through a and b
+    while degrees_a.len() > 0 && degrees_b.len() > 0 {
+
+        degrees_a.sort_by_key(|(_, b)| b.iter().sum::<usize>());
+        let cur_dur = degrees_a[0].1.iter().position(|&x| x > 0).unwrap();
+        // find edges which are already connected to source
+        let remove: Vec<usize> = edge_list.clone()
+            .into_iter()
+            .filter(|&(a, b, _)| a == degrees_a[0].0 || b == degrees_a[0].0)
+            .flat_map(|(a, b, _)| vec![a, b])
+            .filter(|&x| x != degrees_a[0].0 )
+            .collect();
+        // remove already connected edges from contention
+        let tmp_degrees_b: Vec<(usize, Vec<usize>)> = degrees_b
+            .iter()
+            .filter(|(i, x)| !remove.contains(i) && x[cur_dur]>0)
+            .map(|x| x.to_owned())
+            .collect();
+        
+        match tmp_degrees_b.is_empty() {
+            true => {
+                // set this duration to zero if no target  
+                degrees_a[0].1[cur_dur] = 0;
+                if degrees_a[0].1.iter().sum::<usize>() == 0 {
+                    degrees_a.remove(0);
+                }
+            },
+            false => {
+                // pick target randomly by nodes
+                // let i = rng.gen_range(0..tmp_degrees_b.len());
+                // pick target randomly by edges
+                let weights: Vec<usize> = tmp_degrees_b.iter().map(|x| x.1.iter().sum()).collect();
+                let dist = WeightedIndex::new(&weights).unwrap();
+                let i = dist.sample(rng);  
+
+                edge_list.push((degrees_a[0].0, tmp_degrees_b[i].0, cur_dur));
+                // index of target in original list
+                let index = degrees_b
+                    .iter()
+                    .position(|x| x.0 == tmp_degrees_b[i].0)
+                    .unwrap();
+                
+                //reduce or delete target
+                degrees_b[index].1[cur_dur] -= 1;
+                if degrees_b[index].1.iter().sum::<usize>() == 0 {
+                    degrees_b.remove(index);
+                }
+                //reduce or delete index node
+                degrees_a[0].1[cur_dur] -= 1;
+                if degrees_a[0].1.iter().sum::<usize>() == 0 {
+                    degrees_a.remove(0);
+                }
+            }
+        }
+    }
+
+
+    edge_list
+}
+
 // worker functions 
 
 fn move_element(vec: &mut Vec<(usize,usize)>) {
@@ -690,7 +866,12 @@ fn move_element(vec: &mut Vec<(usize,usize)>) {
 // }
 
 fn connect_stub(source: &mut Vec<(usize, usize)>, target: &mut Vec<(usize, usize)>, rng: &mut ThreadRng) -> (usize,usize) {
-    let i = rng.gen_range(0..target.len());
+    // pick target randomly by nodes
+    // let i = rng.gen_range(0..target.len());
+    // pick target randomly by edges
+    let weights: Vec<usize> = target.iter().map(|x| x.1).collect();
+    let dist = WeightedIndex::new(&weights).unwrap();
+    let i = dist.sample(rng);
     let link = (source[0].0,target[i].0);
     //reduce or delete target
     match target[i].1 {
@@ -716,7 +897,14 @@ fn connect_stub(source: &mut Vec<(usize, usize)>, target: &mut Vec<(usize, usize
 }
 
 fn connect_stub_dur(source: &mut Vec<(usize, usize)>, target: &mut Vec<(usize, usize)>, rng: &mut ThreadRng, duration: usize) -> (usize,usize,usize) {
-    let i = rng.gen_range(0..target.len());
+    
+    // pick target randomly by nodes
+    // let i = rng.gen_range(0..target.len());
+    // pick target randomly by edges
+    let weights: Vec<usize> = target.iter().map(|x| x.1).collect();
+    let dist = WeightedIndex::new(&weights).unwrap();
+    let i = dist.sample(rng);
+
     let link = (source[0].0,target[i].0);
     //reduce or delete target
     match target[i].1 {
