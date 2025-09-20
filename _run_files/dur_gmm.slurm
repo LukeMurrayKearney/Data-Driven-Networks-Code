@@ -14,4 +14,4 @@ maturin develop --release
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-python duration+ages/c3_durdist_sims.py
+python c3_durdist_sims.py
