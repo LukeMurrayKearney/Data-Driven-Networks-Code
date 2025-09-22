@@ -138,6 +138,49 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
     })
 }
 
+#[pyfunction]
+fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize) -> PyResult<Py<PyDict>> {
+    
+    let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut avg_d = vec![0.;taus.len()]; 
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
+
+        let results: Vec<(Vec<i64>,f64)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::dur_r0(&network, &mut properties.clone(), prop_infec, num_dur)
+                })
+                .collect();
+        for k in 0..results.len() {
+            let sim = &results[k];
+            r0[i][k] = sim.0.to_owned();
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        dict.set_item("r0s", r0.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;
+        dict.set_item("avg_d_network", avg_d.to_object(py))?;
+        dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
+    
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+
 
 #[pyfunction]
 fn get_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, scaling: &str) -> PyResult<Py<PyDict>> {
@@ -633,6 +676,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_r0, m)?)?;
     m.add_function(wrap_pyfunction!(get_fs, m)?)?;
     m.add_function(wrap_pyfunction!(sellke_dur, m)?)?;
+    m.add_function(wrap_pyfunction!(dur_r0, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;
     m.add_function(wrap_pyfunction!(big_sellke_growth_rate, m)?)?;
