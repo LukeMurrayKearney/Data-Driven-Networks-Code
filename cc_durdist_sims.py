@@ -19,7 +19,7 @@ per_partition = [a if i == 0 else a-partitions[i-1] for i, a in enumerate(partit
 
 bucket_labels = ['0-4', '5-11', '12-17', '18-29', '30-39', '40-49', '50-59', '60-69', '70+']
 duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
-datas = ['comix3']
+datas = ['comixc']
 
 
 for i, data in enumerate(datas):
