@@ -16,19 +16,19 @@ plt.rcParams.update({'font.size': 14})  # Adjust the font size
 
 ################################## build into a package ##################################
 
-def gmm_dur_network(degree_dist, partitions,num_dur=5):
+def gmm_dur_network(degree_dist, partitions, num_dur=5):
     partitions = [int(a) for a in partitions]
     return nd_r.network_dur(degree_dist, partitions, num_dur)
 
-def gmm_dur_r0(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3):
+def gmm_dur_r0(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3, props=[]):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0,inv_gamma]
-    return nd_r.dur_r0(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur)
+    return nd_r.dur_r0(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur, props)
 
-def gmm_dur(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3):
+def gmm_dur(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=7, prop_infec=1e-3, props=[]):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0,inv_gamma]
-    return nd_r.sellke_dur(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur)
+    return nd_r.sellke_dur(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur, props)
 
 def gmm_network(degree_dist, partitions):
     partitions = [int(a) for a in partitions]

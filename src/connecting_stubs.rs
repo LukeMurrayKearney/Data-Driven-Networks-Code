@@ -701,10 +701,11 @@ pub fn connect_stubs_diagonal_dur(degrees: &Vec<(usize, Vec<usize>)>, rng: &mut 
         .filter(|(_, x)| x.iter().sum::<usize>() != 0)
         .map(|(i,x)| (*i, x.clone().to_owned()))
         .collect();
-    nodes.sort_by_key(|(_,b)| b.iter().sum::<usize>());
 
     // go through node list from largest degree to smallest connecting and removing at each step
     while nodes.len() > 1 {
+        // nodes.sort_by_key(|(_,b)| b.iter().sum::<usize>());
+        nodes.sort_by(|a, b| b.1.iter().sum::<usize>().cmp(&a.1.iter().sum::<usize>()));
         let cur_dur = nodes[0].1.iter().position(|&x| x > 0).unwrap();
         // find edges which are already connected
         let remove: Vec<usize> = edge_list.clone()
@@ -716,6 +717,7 @@ pub fn connect_stubs_diagonal_dur(degrees: &Vec<(usize, Vec<usize>)>, rng: &mut 
         // remove already connected edges from contention
         let tmp_nodes: Vec<(usize, Vec<usize>)> = nodes
             .iter()
+            .skip(1)
             .filter(|(i, x)| !remove.contains(i) && x[cur_dur] > 0)
             .map(|x| x.to_owned())
             .collect();
@@ -735,7 +737,7 @@ pub fn connect_stubs_diagonal_dur(degrees: &Vec<(usize, Vec<usize>)>, rng: &mut 
                 // instead we want to do this by edges 
                 let weights: Vec<usize> = tmp_nodes.iter().skip(1).map(|x| x.1[cur_dur]).collect();
                 let dist = WeightedIndex::new(&weights).unwrap();
-                let i = dist.sample(rng) + 1;
+                let i = dist.sample(rng);
                 edge_list.push((nodes[0].0,tmp_nodes[i].0, cur_dur));
                 // index of target in original list
                 let index = nodes
@@ -780,7 +782,8 @@ pub fn connect_stubs_dur(degrees1: &Vec<(usize, Vec<usize>)>, degrees2: &Vec<(us
     // loop through a and b
     while degrees_a.len() > 0 && degrees_b.len() > 0 {
 
-        degrees_a.sort_by_key(|(_, b)| b.iter().sum::<usize>());
+        // degrees_a.sort_by_key(|(_, b)| b.iter().sum::<usize>());
+        degrees_a.sort_by(|a, b| b.1.iter().sum::<usize>().cmp(&a.1.iter().sum::<usize>()));
         let cur_dur = degrees_a[0].1.iter().position(|&x| x > 0).unwrap();
         // find edges which are already connected to source
         let remove: Vec<usize> = edge_list.clone()

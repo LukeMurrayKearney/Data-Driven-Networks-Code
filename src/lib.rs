@@ -95,7 +95,7 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 //////////////////////////////////////////// outbreak simulation //////////////////////////////////////
 
 #[pyfunction]
-fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize) -> PyResult<Py<PyDict>> {
+fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
@@ -114,7 +114,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
-                    run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, num_dur)
+                    run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, num_dur, props.clone())
                 })
                 .collect();
         for (k, &sim) in results.iter().enumerate() {
@@ -139,7 +139,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
 }
 
 #[pyfunction]
-fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize) -> PyResult<Py<PyDict>> {
+fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
@@ -157,7 +157,7 @@ fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usi
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
-                    run_model::dur_r0(&network, &mut properties.clone(), prop_infec, num_dur)
+                    run_model::dur_r0(&network, &mut properties.clone(), prop_infec, num_dur, props.clone())
                 })
                 .collect();
         for k in 0..results.len() {
