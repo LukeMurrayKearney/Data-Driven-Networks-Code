@@ -7,7 +7,7 @@ import json
 import sklearn.mixture
 import math
 
-n = 10_000
+n = 100_000
 num_networks= 20
 
 taus = np.arange(0.05,2.05,0.05)
