@@ -63,7 +63,7 @@ impl ScaleParams {
 
 
 pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize) 
-    -> (f64, f64, f64) {
+    -> (f64, f64, f64, f64, f64) {
 
     // seed an outbreak
     let n = network_structure.partitions.last().unwrap().to_owned();
@@ -238,13 +238,17 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
         }
     }
     let sc: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc2: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc3: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     if cur_min_gen >= 3 {
         ((I_events.iter().filter(|&&x| x >= 0).collect::<Vec<&i64>>().len() as f64)/(network_structure.ages.len() as f64),
         (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
+        (sc2.iter().sum::<usize>() as f64)/(sc.len() as f64),
+        (sc3.iter().sum::<usize>() as f64)/(sc.len() as f64),
         beta)
     } 
     else {
-        (-1., -1., beta)
+        (-1., -1., -1., -1., beta)
     }
 }
 

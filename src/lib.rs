@@ -101,6 +101,8 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r02 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r03 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
     let mut tmp_num_dur = num_dur;
@@ -118,7 +120,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64)>
+        let results: Vec<(f64,f64,f64,f64,f64)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -126,7 +128,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
                 })
                 .collect();
         for (k, &sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; 
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3;
         }
     }
     
@@ -137,6 +139,8 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
         
         dict.set_item("fs", fs.to_object(py))?;
         dict.set_item("r0", r0.to_object(py))?;
+        dict.set_item("r02", r02.to_object(py))?;
+        dict.set_item("r03", r03.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
         dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
