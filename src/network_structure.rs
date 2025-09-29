@@ -39,7 +39,7 @@ impl NetworkStructureDuration {
         let mut new_freq_dist: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; 5]; self.ages.last().unwrap() + 1]; self.ages.len()];
         let mut new_adj_matrix: Vec<Vec<(usize, usize, usize)>> = vec![Vec::new(); self.ages.len()];
         let mut rng = rand::thread_rng();
-        for i in 0..self.ages.len() {
+        for i in 0..self.adjacency_matrix.len() {
             for (_, j, d) in self.adjacency_matrix[i].iter() {
                 let mut tmp_d = *d + 2;
                 if *d == 0 {
