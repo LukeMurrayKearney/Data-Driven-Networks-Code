@@ -1,3 +1,4 @@
+use core::num;
 use std::os::linux::net;
 
 use pyo3::prelude::*;
@@ -16,10 +17,12 @@ mod run_model;
 ////////////////////////////////////////////// Network Creation ////////////////////////////////////////
 
 #[pyfunction]
-fn network_dur(degree_age_breakdown: Vec<Vec<usize>>, partitions: Vec<usize>, num_dur: usize) -> PyResult<Py<PyDict>> {
+fn network_dur(degree_age_breakdown: Vec<Vec<usize>>, partitions: Vec<usize>, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
 
-    let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
-
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+    }
     // Initialize the Python interpreter
     Python::with_gil(|py| {
         // Create output PyDict
@@ -100,12 +103,17 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
+    let mut tmp_num_dur = num_dur;
 
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        if props.len() > 0 {
+            network.transform(&props);
+            tmp_num_dur = 5;
+        }
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
@@ -114,7 +122,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
-                    run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, num_dur, props.clone())
+                    run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, tmp_num_dur)
                 })
                 .collect();
         for (k, &sim) in results.iter().enumerate() {
@@ -142,13 +150,19 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
 fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
-    let mut avg_d = vec![0.;taus.len()]; 
+    let mut avg_d = vec![0.;taus.len()];
+    let mut tmp_num_dur = num_dur; 
 
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        if props.len() > 0 {
+            network.transform(&props);
+            tmp_num_dur = 5;
+        }
+
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
@@ -157,7 +171,7 @@ fn dur_r0(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usi
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
-                    run_model::dur_r0(&network, &mut properties.clone(), prop_infec, num_dur, props.clone())
+                    run_model::dur_r0(&network, &mut properties.clone(), prop_infec, tmp_num_dur, props.clone())
                 })
                 .collect();
         for k in 0..results.len() {

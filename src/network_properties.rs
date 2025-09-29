@@ -1,5 +1,7 @@
+use core::num;
+
 use crate::network_structure::{NetworkStructure, NetworkStructureDuration};
-use crate::run_model::{scale_fit, ScaleParams};
+use crate::run_model::{scale_fit, ScaleParams, dur_to_mins, dur_to_mins3};
 use rand::distributions::WeightedIndex;
 use rand::seq::SliceRandom;
 // use statrs::distribution::Poisson;
@@ -69,7 +71,7 @@ impl NetworkProperties {
         }
     }
 
-    pub fn initialize_infection_sellke_dur(&mut self, network: &NetworkStructureDuration, proportion_of_population: f64) {
+    pub fn initialize_infection_sellke_dur(&mut self, network: &NetworkStructureDuration, proportion_of_population: f64, num_dur: usize) {
 
         let number_of_infecteds: usize = match proportion_of_population as usize {
             0..=1 => {
@@ -85,16 +87,20 @@ impl NetworkProperties {
 
         
         //we want a weighted sampling of the population
-        let probabilities: Vec<f64> = network.degrees
+        let mut probabilities: Vec<f64> = network.degrees
             .iter()
             .map(|x| {
-                x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * dur_to_mins(dur_index+1)).sum()
+                x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * {if num_dur == 5 {dur_to_mins(dur_index+1)} else {dur_to_mins3(dur_index+1)}}).sum()
             })
             .collect();
 
-        // weighted index of each individual
-        let dist = WeightedIndex::new(probabilities).unwrap();
-        let selected: Vec<usize> = (0..number_of_infecteds).map(|_| dist.sample(&mut rng)).collect();
+        let mut selected: Vec<usize> = Vec::new();
+        for _ in 0..number_of_infecteds {
+            let dist = WeightedIndex::new(&probabilities).unwrap();
+            let i = dist.sample(&mut rng);
+            selected.push(i);
+            probabilities[i] = 0.;
+        }
 
         // infect selected individuals
         for &i in selected.iter() {
@@ -309,17 +315,5 @@ impl NetworkProperties {
             }
         }
         result
-    }
-}
-
-fn dur_to_mins(duration: usize) -> f64 {
-
-    match duration {
-        1 => 2.5,
-        2 => 10.,
-        3 => 37.5,
-        4 => 150.,
-        5 => 840.,
-        _ => 2.5
     }
 }

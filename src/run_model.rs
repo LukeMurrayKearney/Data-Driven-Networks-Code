@@ -62,13 +62,13 @@ impl ScaleParams {
 }
 
 
-pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize, props: Vec<f64>) 
+pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize) 
     -> (f64, f64, f64) {
 
     // seed an outbreak
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
-    network_properties.initialize_infection_sellke_dur(network_structure, initially_infected);
+    network_properties.initialize_infection_sellke_dur(network_structure, initially_infected, num_dur);
     // holding sir 
     let mut sir: Vec<Vec<usize>> = Vec::new();
     // let mut sir_ages: Vec<Vec<Vec<usize>>> = Vec::new();
@@ -92,16 +92,12 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     let mut ct = Array1::<f64>::zeros(n);
     // base infection pressure proportion ct on adjacency matrix 
     for &person in I_cur.iter() {
-        update_ct_dur(&mut ct, network_structure, true, person, num_dur, &props);
+        update_ct_dur(&mut ct, network_structure, true, person, num_dur);
     }
     
     // define infection periods
     let exp_infectious = Exp::new(1./inv_gamma).unwrap();
     let I_periods: Vec<f64> = (0..n).map(|_| exp_infectious.sample(&mut rng)).collect();
-    // println!("network = \n{:?}", network_structure);
-    // println!("properties = \n{:?}", network_properties);
-    // println!("average infectious period {:?}", I_periods.iter().sum::<f64>()/(I_periods.len() as f64));
-    // println!("I_cur = \n{:?}", I_cur);
 
     // define thresholds
     let exp_thresh = Exp::new(1.).unwrap();
@@ -125,7 +121,6 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     let mut cur_min_gen = 0;
     while I_cur.len() > 0 {
         // get the minimum recovery time
-        // println!("\nlength of R = {:?}", recovery_times.len());
         let (min_index_vec, min_index_node, min_r) = recovery_times
             .iter()
             .enumerate()
@@ -160,15 +155,13 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
             // update_sir_ages(&mut sir_ages, false, network_structure.ages[min_index_node]);
             La_t = Laprop.clone();
             // update ct 
-            update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur, &props);
+            update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur);
         }
         else {
             // we may have multiple infections before a recovery,
             // to get correct increase in FOI we need to do these in the right order 
             let mut waiting_infections: Vec<usize> = Vec::new();
             for (i, &threshold) in thresholds.iter().enumerate().filter(|(_,&x)| x>=0.) {
-                // println!("threshold = {threshold}");
-                // println!("i = {i}\n");
                 // infection event 
                 if threshold < Laprop[i] {
                     waiting_infections.push(i);
@@ -176,7 +169,6 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
             }
             // if no infections pending before recovery
             if waiting_infections.len() == 0 {
-                // println!("Recovery\nsum(LA_t) = {:?}\nsum(ct) = {:?}\n",La_t.iter().filter(|&&x| x>=0.).sum::<f64>(), ct.iter().sum::<f64>());
                 // do recovery
                 recovery_times.remove(min_index_vec);
                 tt = min_r.clone();
@@ -187,11 +179,10 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 I_cur = I_cur.iter().filter(|&&x| x != min_index_node).map(|&x| x).collect::<Vec<usize>>();
                 update_sir(&mut sir, false);
                 La_t = Laprop.clone();
-                update_ct_dur(&mut ct, &network_structure, false, min_index_node,num_dur, &props);
+                update_ct_dur(&mut ct, &network_structure, false, min_index_node,num_dur);
             }
             // do infection
             else {
-                // println!("Infection\nsum(LA_t) = {:?}\nsum(ct) = {:?}\n",La_t.iter().filter(|&&x| x>=0.).sum::<f64>(), ct.iter().sum::<f64>());
                 // we need to find which threshold would break first, not trivial because of network structure
                 let first_infection = waiting_infections
                     .iter()
@@ -201,7 +192,6 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 // time of first infection
                 let ratio = (thresholds[first_infection] - La_t[first_infection])/(Laprop[first_infection] - La_t[first_infection]);
                 tt = tt + ratio*dtprop;
-                // println!("first infection = {:?}\nratio = {:?}\n", first_infection, ratio);
                 t.push(tt.clone());
                 // set a new La to be used at the start of next iteration
                 // let ratio = thresholds[first_infection]/Laprop[first_infection];
@@ -209,7 +199,6 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 La_t = &La_t + &lambda*ratio;
                 // add their recovery time
                 recovery_times.push((first_infection, I_periods[first_infection] + tt));
-                
                 // add info on secondary cases generation and infection from 
                 // to choose secondary case pick randomly with probability based on each persons FOI on i
                 let contacts = network_structure.adjacency_matrix[first_infection]
@@ -222,23 +211,18 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                         // if neighbour infected
                         if I_events.contains(&(j.to_owned() as i64)) && !R_events.contains(&(j.to_owned() as i64)){
                             //let time_infec = tt - t[I_events.iter().position(|&x| x == (j as i64)).unwrap()]; // we dont actually use this because we want instantaneous neighbours 
-                            return if num_dur == 5 {dur_to_mins(*cur_duration)/dur_to_mins(5)} else if props.len() == 0 {dur_to_mins3(*cur_duration)/dur_to_mins3(3)} else {dur_to_mins_props(*cur_duration, &props, &mut rng)/dur_to_mins3(3)} 
+                            return if num_dur == 5 {dur_to_mins(*cur_duration+1)/dur_to_mins(num_dur)} else{ dur_to_mins3(*cur_duration+1)/dur_to_mins3(num_dur)} 
                         }
                         else {
                             return 0.;
                         }
                     })
                     .collect();
-                // println!("contacts: {:?}\nimpacts: {:?}\nI_events: {:?}\nR_events: {:?}",contacts, impacts, I_events, R_events);
                 let dist = WeightedIndex::new(&impacts).unwrap();
                 let index_case = contacts[dist.sample(&mut rng)].0;
                 network_properties.disease_from[first_infection] = index_case as i64;
                 network_properties.generation[first_infection] = network_properties.generation[index_case] + 1;
                 network_properties.secondary_cases[index_case] += 1;
-                // println!("index case: {:?}\nfirst infection: {:?}", index_case, first_infection);
-                // println!("index case links: {:?}\nfirst infection links: {:?}", network_structure.adjacency_matrix[index_case].iter().map(|x| x.1).collect::<Vec<usize>>(), network_structure.adjacency_matrix[first_infection].iter().map(|x| x.1).collect::<Vec<usize>>());
-                // println!("generations: {:?}, {:?}", network_properties.generation[index_case], network_properties.generation[first_infection]);
-                // println!("\n\nstep\n\n");
 
                 // update SIR and event vecs
                 I_events.push(first_infection as i64);
@@ -246,7 +230,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 I_cur.push(first_infection);
                 update_sir(&mut sir, true);
                 // update_sir_ages(&mut sir_ages, true, network_structure.ages[first_infection]);
-                update_ct_dur(&mut ct, &network_structure, true, first_infection, num_dur, &props);
+                update_ct_dur(&mut ct, &network_structure, true, first_infection, num_dur);
                 if I_cur.len() > 0 {
                     cur_min_gen = I_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
                 }
@@ -270,7 +254,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
     // seed an outbreak
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
-    network_properties.initialize_infection_sellke_dur(network_structure, initially_infected);
+    network_properties.initialize_infection_sellke_dur(network_structure, initially_infected, num_dur);
     // holding sir 
     let mut sir: Vec<Vec<usize>> = Vec::new();
     // let mut sir_ages: Vec<Vec<Vec<usize>>> = Vec::new();
@@ -294,7 +278,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
     let mut ct = Array1::<f64>::zeros(n);
     // base infection pressure proportion ct on adjacency matrix 
     for &person in I_cur.iter() {
-        update_ct_dur(&mut ct, network_structure, true, person, num_dur, &props);
+        update_ct_dur(&mut ct, network_structure, true, person, num_dur);
     }
     
     // define infection periods
@@ -362,7 +346,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
             // update_sir_ages(&mut sir_ages, false, network_structure.ages[min_index_node]);
             La_t = Laprop.clone();
             // update ct 
-            update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur, &props);
+            update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur);
         }
         else {
             // we may have multiple infections before a recovery,
@@ -389,7 +373,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
                 I_cur = I_cur.iter().filter(|&&x| x != min_index_node).map(|&x| x).collect::<Vec<usize>>();
                 update_sir(&mut sir, false);
                 La_t = Laprop.clone();
-                update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur, &props);
+                update_ct_dur(&mut ct, &network_structure, false, min_index_node, num_dur);
             }
             // do infection
             else {
@@ -424,7 +408,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
                         // if neighbour infected
                         if I_events.contains(&(j.to_owned() as i64)) && !R_events.contains(&(j.to_owned() as i64)){
                             //let time_infec = tt - t[I_events.iter().position(|&x| x == (j as i64)).unwrap()]; // we dont actually use this because we want instantaneous neighbours 
-                            return if num_dur == 5 {dur_to_mins(*cur_duration)/dur_to_mins(5)} else if props.len()==0 {dur_to_mins3(*cur_duration)/dur_to_mins3(3)} else {dur_to_mins_props(*cur_duration, &props, &mut rng)/dur_to_mins3(3)}
+                            return if num_dur == 5 {dur_to_mins(*cur_duration+1)/dur_to_mins(num_dur)} else {dur_to_mins3(*cur_duration+1)/dur_to_mins3(num_dur)}
                         }
                         else {
                             return 0.;
@@ -448,7 +432,7 @@ pub fn dur_r0(network_structure: &NetworkStructureDuration, network_properties: 
                 I_cur.push(first_infection);
                 update_sir(&mut sir, true);
                 // update_sir_ages(&mut sir_ages, true, network_structure.ages[first_infection]);
-                update_ct_dur(&mut ct, &network_structure, true, first_infection, num_dur, &props);
+                update_ct_dur(&mut ct, &network_structure, true, first_infection, num_dur);
                 if I_cur.len() > 0 {
                     cur_min_gen = I_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
                 }
@@ -1148,15 +1132,15 @@ fn update_ct(ct: &mut Array1<f64>, network: &NetworkStructure, infection: bool, 
     }
 }
 
-fn update_ct_dur(ct: &mut Array1<f64>, network: &NetworkStructureDuration, infection: bool, i: usize, num_dur: usize, props:&Vec<f64>) {
+fn update_ct_dur(ct: &mut Array1<f64>, network: &NetworkStructureDuration, infection: bool, i: usize, num_dur: usize) {
     
     for link in network.adjacency_matrix[i].iter() {
         // we want to decide which side and if we are scaling 
         if infection == true {
-            ct[link.1] += if num_dur==5 {dur_to_mins(link.2)/dur_to_mins(num_dur)} else if props.len() == 0 {dur_to_mins3(link.2)/dur_to_mins3(num_dur)} else {let mut rng = rand::thread_rng(); dur_to_mins_props(link.2, props, &mut rng)/dur_to_mins3(num_dur)};
+            ct[link.1] += if num_dur==5 {dur_to_mins(link.2+1)/dur_to_mins(num_dur)} else {dur_to_mins3(link.2+1)/dur_to_mins3(num_dur)};
         }
         else {
-            ct[link.1] -= if num_dur==5 {dur_to_mins(link.2)/dur_to_mins(num_dur)} else if props.len() == 0 {dur_to_mins3(link.2)/dur_to_mins3(num_dur)} else {let mut rng = rand::thread_rng(); dur_to_mins_props(link.2, props, &mut rng)/dur_to_mins3(num_dur)}; 
+            ct[link.1] -= if num_dur==5 {dur_to_mins(link.2+1)/dur_to_mins(num_dur)} else {dur_to_mins3(link.2+1)/dur_to_mins3(num_dur)};
         }
     }
 }
@@ -1193,7 +1177,7 @@ pub fn scale_fit(params: &ScaleParams, k: f64) -> f64 {
     params.a*(-params.b*k).exp()*k.powi(2) + params.c/k.powf(params.d) + params.e/k
 }
 
-fn dur_to_mins(duration: usize) -> f64 {
+pub fn dur_to_mins(duration: usize) -> f64 {
 
     match duration {
         1 => 2.5,
@@ -1205,25 +1189,10 @@ fn dur_to_mins(duration: usize) -> f64 {
     }
 }
 
-fn dur_to_mins3(duration: usize) -> f64 {
+pub fn dur_to_mins3(duration: usize) -> f64 {
 
     match duration {
         1 => 30.,
-        2 => 150.,
-        3 => 480.,
-        _ => 30.
-    }
-}
-
-fn dur_to_mins_props(duration: usize, props: &Vec<f64>, rng: &mut ThreadRng) -> f64 {
-    
-    match duration {
-        1 => {
-            let x: f64 = rng.gen();
-            if x > props[0] {3.}
-            else if x > props[0] + props[1] {10.}
-            else {37.5}
-        },
         2 => 150.,
         3 => 480.,
         _ => 30.

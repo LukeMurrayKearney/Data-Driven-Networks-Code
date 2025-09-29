@@ -1,6 +1,7 @@
 use core::num;
 
 use rand::Rng;
+use rand::rngs;
 use rand::rngs::ThreadRng;
 use crate::distributions::*;
 // use crate::read_in::read_rates_mat;
@@ -31,6 +32,37 @@ pub struct NetworkStructureDuration {
 }
 
 impl NetworkStructureDuration {
+
+    pub fn transform(&mut self, props: &Vec<f64>) {
+
+        let mut new_degrees = vec![vec![0; 5]; self.degrees.len()];
+        let mut new_freq_dist: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; 5]; self.ages.last().unwrap() + 1]; self.ages.len()];
+        let mut new_adj_matrix: Vec<Vec<(usize, usize, usize)>> = vec![Vec::new(); self.ages.len()];
+        let mut rng = rand::thread_rng();
+        for i in 0..self.ages.len() {
+            for (_, j, d) in self.adjacency_matrix[i].iter() {
+                let mut tmp_d = *d + 2;
+                if *d == 0 {
+                    let x = rng.gen::<f64>();
+                    if x < props[0] {
+                        tmp_d = 0;
+                    }
+                    else if x < props[0] + props[1] {
+                        tmp_d = 1;
+                    }
+                    else {
+                        tmp_d = 2;
+                    }
+                }
+                new_degrees[*j][*d] += 1;
+                new_freq_dist[i][self.ages[*j]][*d] += 1;
+                new_adj_matrix[i].push((i,*j,*d));
+            }
+        }
+        self.degrees = new_degrees;
+        self.frequency_distribution = new_freq_dist;
+        self.adjacency_matrix = new_adj_matrix;
+    }
     
     pub fn new_from_dur_dist(partitions: &Vec<usize>, degree_age_breakdown: &Vec<Vec<usize>>, num_durs: usize) -> NetworkStructureDuration {
 
