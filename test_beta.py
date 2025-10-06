@@ -43,7 +43,7 @@ for i, data in enumerate(datas):
             for sample in samples_tmp:
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur(samples,partitions=partitions,num_dur=3, taus=taus, iterations=10,props=props.tolist())
+        res = nd_p.gmm_dur(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist())
     for index, beta in enumerate(res['taus']):
         try:
             r0 = np.mean([a for a in res['r0'][index] if a>0])
