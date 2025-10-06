@@ -63,6 +63,7 @@ impl NetworkStructureDuration {
         self.frequency_distribution = new_freq_dist;
         self.adjacency_matrix = new_adj_matrix;
     }
+
     
     pub fn new_from_dur_dist(partitions: &Vec<usize>, degree_age_breakdown: &Vec<Vec<usize>>, num_durs: usize) -> NetworkStructureDuration {
 
@@ -107,6 +108,7 @@ impl NetworkStructureDuration {
                     tmp_edges = connect_stubs_diagonal_dur(&nodes_i, &mut rng);
                 }
                 else {
+                    let (nodes_i, nodes_j) = balance_stubs_dur(&nodes_i, &nodes_j, &mut rng);
                     tmp_edges = connect_stubs_dur(&nodes_i, &nodes_j, &mut rng);
                 }
                 // add edges to sparse matrix
@@ -493,5 +495,42 @@ impl NetworkStructure {
             frequency_distribution: frequency_distribution,
             partitions: partitions.clone(),
         }
+    }
+}
+
+pub fn balance_stubs_dur(nodes_i: &Vec<(usize, Vec<usize>)>, nodes_j: &Vec<(usize, Vec<usize>)>, rng: &mut ThreadRng) -> (Vec<(usize, Vec<usize>)>, Vec<(usize, Vec<usize>)>) {
+    
+    let mut nodes_i = nodes_i.clone();
+    let mut nodes_j = nodes_j.clone();
+    
+    for dur in 0..nodes_i[0].1.len() {
+        let total_i = nodes_i.iter().map(|(_, vec)| vec[dur]).sum::<usize>() as f64;
+        let total_j = nodes_j.iter().map(|(_, vec)| vec[dur]).sum::<usize>() as f64;
+        if total_i < total_j {
+            let scale = (total_i + total_j)/(2.0*total_i);
+            for idx in 0..nodes_i.len() {
+                let new_val = (nodes_i[idx].1[dur] as f64)*scale;
+                nodes_i[idx].1[dur] = stochastic_round(new_val, rng);
+            }
+        }
+        else {
+            let scale = (total_i + total_j)/(2.0*total_j);
+            for idx in 0..nodes_j.len() {
+                let new_val = (nodes_j[idx].1[dur] as f64)*scale;
+                nodes_j[idx].1[dur] = stochastic_round(new_val, rng);
+            }
+        }
+    }
+    (nodes_i, nodes_j)
+}
+
+fn stochastic_round(x: f64, rng: &mut ThreadRng) -> usize {
+    let int_part = x.floor() as usize;
+    let frac_part = x - (int_part as f64);
+    if rng.gen::<f64>() < frac_part {
+        int_part + 1
+    }
+    else {
+        int_part
     }
 }

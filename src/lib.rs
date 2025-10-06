@@ -105,6 +105,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
     let mut r03 = vec![vec![0.; iterations];taus.len()]; 
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
+    let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
     let mut tmp_num_dur = num_dur;
 
     for (i, &tau) in taus.iter().enumerate() {
@@ -120,15 +121,15 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64,f64,f64)>
+        let results: Vec<(f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,f64)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
                     run_model::dur_sellke(&network, &mut properties.clone(), prop_infec, tmp_num_dur)
                 })
                 .collect();
-        for (k, &sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3;
+        for (k, sim) in results.iter().enumerate() {
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; age_dur_breakdown[i][k] = sim.4.clone();
         }
     }
     
@@ -142,6 +143,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
         dict.set_item("r02", r02.to_object(py))?;
         dict.set_item("r03", r03.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
+        dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
         dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
     

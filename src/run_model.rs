@@ -63,7 +63,7 @@ impl ScaleParams {
 
 
 pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize) 
-    -> (f64, f64, f64, f64, f64) {
+    -> (f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, f64) {
 
     // seed an outbreak
     let n = network_structure.partitions.last().unwrap().to_owned();
@@ -73,8 +73,7 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     let mut sir: Vec<Vec<usize>> = Vec::new();
     // let mut sir_ages: Vec<Vec<Vec<usize>>> = Vec::new();
     sir.push(network_properties.count_states());
-    // sir_ages.push(network_properties.count_states_age(network_structure));
-
+    let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
     // data structures for holding events
     let mut I_cur: Vec<usize> = network_properties.nodal_states
         .iter()
@@ -223,6 +222,8 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
                 network_properties.disease_from[first_infection] = index_case as i64;
                 network_properties.generation[first_infection] = network_properties.generation[index_case] + 1;
                 network_properties.secondary_cases[index_case] += 1;
+                age_dur_sc[network_structure.ages[index_case]][network_structure.ages[first_infection]]
+                    [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==first_infection).map(|(_,_,c)| *c).unwrap()] += 1;
 
                 // update SIR and event vecs
                 I_events.push(first_infection as i64);
@@ -245,10 +246,11 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
         (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
         (sc2.iter().sum::<usize>() as f64)/(sc.len() as f64),
         (sc3.iter().sum::<usize>() as f64)/(sc.len() as f64),
+        age_dur_sc,
         beta)
     } 
     else {
-        (-1., -1., -1., -1., beta)
+        (-1., -1., -1., -1., Vec::new(), beta)
     }
 }
 
