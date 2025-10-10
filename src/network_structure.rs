@@ -54,9 +54,9 @@ impl NetworkStructureDuration {
                         tmp_d = 2;
                     }
                 }
-                new_degrees[*j][*d] += 1;
-                new_freq_dist[i][self.ages[*j]][*d] += 1;
-                new_adj_matrix[i].push((i,*j,*d));
+                new_degrees[*j][tmp_d] += 1;
+                new_freq_dist[i][self.ages[*j]][tmp_d] += 1;
+                new_adj_matrix[i].push((i, *j, tmp_d));
             }
         }
         self.degrees = new_degrees;
