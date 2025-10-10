@@ -244,8 +244,8 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     if cur_min_gen >= 3 {
         ((I_events.iter().filter(|&&x| x >= 0).collect::<Vec<&i64>>().len() as f64)/(network_structure.ages.len() as f64),
         (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
-        (sc2.iter().sum::<usize>() as f64)/(sc.len() as f64),
-        (sc3.iter().sum::<usize>() as f64)/(sc.len() as f64),
+        (sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64),
+        (sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64),
         age_dur_sc,
         beta)
     } 
