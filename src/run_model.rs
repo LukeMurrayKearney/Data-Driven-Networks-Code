@@ -63,7 +63,7 @@ impl ScaleParams {
 
 
 pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize) 
-    -> (f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, f64) {
+    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, f64) {
 
     // seed an outbreak
     let n = network_structure.partitions.last().unwrap().to_owned();
@@ -241,16 +241,26 @@ pub fn dur_sellke(network_structure: &NetworkStructureDuration, network_properti
     let sc: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc2: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc3: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc4: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc5: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 5).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc6: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 6).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc7: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let sc8: Vec<usize> = R_events.iter().filter(|&&x| x >= 0 && network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     if cur_min_gen >= 3 {
         ((I_events.iter().filter(|&&x| x >= 0).collect::<Vec<&i64>>().len() as f64)/(network_structure.ages.len() as f64),
         (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
         (sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64),
         (sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64),
+        if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
+        if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
+        if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
+        if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
+        if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
         age_dur_sc,
         beta)
     } 
     else {
-        (-1., -1., -1., -1., Vec::new(), beta)
+        (-1., -1., -1., -1., -1., -1., -1., -1., -1., Vec::new(), beta)
     }
 }
 

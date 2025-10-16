@@ -103,6 +103,11 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
     let mut r02 = vec![vec![0.; iterations];taus.len()]; 
     let mut r03 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r04 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r05 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r06 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r07 = vec![vec![0.; iterations];taus.len()];
+    let mut r08 = vec![vec![0.; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
@@ -121,7 +126,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,f64)>
+        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,f64)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -129,7 +134,7 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; age_dur_breakdown[i][k] = sim.4.clone();
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone();
         }
     }
     
@@ -142,6 +147,11 @@ fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations:
         dict.set_item("r0", r0.to_object(py))?;
         dict.set_item("r02", r02.to_object(py))?;
         dict.set_item("r03", r03.to_object(py))?;
+        dict.set_item("r04", r04.to_object(py))?;
+        dict.set_item("r05", r05.to_object(py))?;
+        dict.set_item("r06", r06.to_object(py))?;
+        dict.set_item("r07", r07.to_object(py))?;
+        dict.set_item("r08", r08.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
