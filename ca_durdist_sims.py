@@ -10,9 +10,8 @@ import math
 n = 100_000
 num_networks= 20
 
-t1 = np.arange(.05,1.05,0.05)
-t2 = np.arange(1.1,6.1,.333)
-taus = np.concatenate((t1,t2))
+taus = np.arange(1,50,1)
+
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
