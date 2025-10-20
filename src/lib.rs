@@ -98,6 +98,71 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
 //////////////////////////////////////////// outbreak simulation //////////////////////////////////////
 
 #[pyfunction]
+fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
+    
+    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r02 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r03 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r04 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r05 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r06 = vec![vec![0.; iterations];taus.len()]; 
+    let mut r07 = vec![vec![0.; iterations];taus.len()];
+    let mut r08 = vec![vec![0.; iterations];taus.len()];
+    let mut fs = vec![vec![0.; iterations];taus.len()]; 
+    let mut avg_d = vec![0.;taus.len()]; 
+    let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
+    let mut tmp_num_dur = num_dur;
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+        if props.len() > 0 {
+            network.transform(&props);
+            tmp_num_dur = 5;
+        }
+        let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
+
+        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,f64)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::dur_gillesp(&network, &mut properties.clone(), prop_infec, tmp_num_dur)
+                })
+                .collect();
+        for (k, sim) in results.iter().enumerate() {
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone();
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("fs", fs.to_object(py))?;
+        dict.set_item("r0", r0.to_object(py))?;
+        dict.set_item("r02", r02.to_object(py))?;
+        dict.set_item("r03", r03.to_object(py))?;
+        dict.set_item("r04", r04.to_object(py))?;
+        dict.set_item("r05", r05.to_object(py))?;
+        dict.set_item("r06", r06.to_object(py))?;
+        dict.set_item("r07", r07.to_object(py))?;
+        dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;
+        dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
+        dict.set_item("avg_d_network", avg_d.to_object(py))?;
+        dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
+    
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+#[pyfunction]
 fn sellke_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, prop_infec: f64, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut r0 = vec![vec![0.; iterations];taus.len()]; 
@@ -706,6 +771,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_r0, m)?)?;
     m.add_function(wrap_pyfunction!(get_fs, m)?)?;
     m.add_function(wrap_pyfunction!(sellke_dur, m)?)?;
+    m.add_function(wrap_pyfunction!(gillesp_dur, m)?)?;
     m.add_function(wrap_pyfunction!(dur_r0, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;

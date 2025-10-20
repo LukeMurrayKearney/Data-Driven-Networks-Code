@@ -48,6 +48,6 @@ for i, data in enumerate(datas):
             for sample in samples_tmp:
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist())
-        with open(f'duration+ages/sims/{data}_{k+20}.json','w') as f:
+        res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist())
+        with open(f'duration+ages/sims/{data}_{k}_g.json','w') as f:
             json.dump(res, f)
