@@ -45,6 +45,39 @@ impl NetworkProperties {
         }
     }
 
+    pub fn initialize_infection_gillespie(&mut self, network: &NetworkStructureDuration, num_infec: usize, num_dur: usize) {
+
+        let mut number_of_infecteds: usize = 1;
+        if num_infec > 1 && num_infec < self.nodal_states.len() {
+            number_of_infecteds = num_infec;
+        }
+        // define random number generator
+        let mut rng = rand::thread_rng();
+
+        //we want a weighted sampling of the population
+        let mut probabilities: Vec<f64> = network.degrees
+            .iter()
+            .map(|x| {
+                x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * {if num_dur == 5 {dur_to_mins(dur_index+1)} else {dur_to_mins3(dur_index+1)}}).sum()
+            })
+            .collect();
+
+        let mut selected: Vec<usize> = Vec::new();
+        for _ in 0..number_of_infecteds {
+            let dist = WeightedIndex::new(&probabilities).unwrap();
+            let i = dist.sample(&mut rng);
+            selected.push(i);
+            probabilities[i] = 0.;
+        }
+
+        // infect selected individuals
+        for &i in selected.iter() {
+            self.nodal_states[i] = State::Infected(0);
+            // self.nodal_states[i] = State::Infected(poisson_infectious_period.sample(&mut rng).round() as usize);
+            self.generation[i] = 1;
+        }
+    }
+
     pub fn initialize_infection_sellke_rand(&mut self, proportion_of_population: f64) {
 
         let number_of_infecteds: usize = match proportion_of_population as usize {

@@ -5,7 +5,7 @@ use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 // use rand_distr::num_traits::{Pow, ToBytes};
 use statrs::distribution::{Continuous, Exp, Geometric, Normal, Uniform};
 use rand_distr::{Binomial, Distribution, WeightedIndex};
-use rayon::prelude::*;
+use rayon::{prelude::*, vec};
 use statrs::statistics::Statistics;
 use core::num;
 use std::cmp;
@@ -61,12 +61,105 @@ impl ScaleParams {
     }
 }
 
-pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: f64, num_dur: usize)
+pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize) -> (Vec<Vec<usize>>, Vec<i64>, Vec<i64>, Vec<f64>) {
+
+    let n = network_structure.partitions.last().unwrap().to_owned();
+    let mut rng = rand::thread_rng();
+    network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
+    let mut sir: Vec<Vec<usize>> = Vec::new();
+    sir.push(network_properties.count_states());
+    let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
+
+    let mut i_cur: Vec<usize> = network_properties.nodal_states
+        .iter()
+        .enumerate()
+        .filter(|(_,&state)| state == State::Infected(0))
+        .map(|(i,_)| i)
+        .collect();
+    let mut r_cur: Vec<usize> = Vec::new();
+    let mut t = 0.;
+    let (mut i_events, mut r_events, mut ts): (Vec<i64>, Vec<i64>, Vec<f64>) = (i_cur.iter().map(|x| *x as i64).collect(), vec![-1; i_cur.len()], vec![0.; i_cur.len()]);
+    let beta = network_properties.parameters[0];
+    let inv_gamma = network_properties.parameters[1];
+
+    while i_cur.len() > 0 {
+        
+        let mut rate_pp = Vec::new();
+        let rate_inf = i_cur.iter().map(|&i| {
+            rate_pp.push(
+                network_structure.adjacency_matrix[i]  
+                    .iter()
+                    .map(|link| {
+                        if network_properties.nodal_states[link.1] == State::Susceptible {
+                        dur_to_mins(link.2+1)/dur_to_mins(num_dur)
+                        }
+                        else {
+                            0.
+                        }
+                    }).sum::<f64>()
+                );                
+            rate_pp.last().unwrap().to_owned()
+        }).sum::<f64>() * beta;
+        let rate_rec = i_cur.len() as f64 * inv_gamma;
+        let rate_total = rate_inf + rate_rec;
+
+        // time to next event
+        let u1 = rng.gen::<f64>();
+        let dt = (1.0 / u1).ln() / rate_total;
+        t += dt;
+        let p_inf = rate_inf / rate_total;
+        let u2 = rng.gen::<f64>();
+        if u2 < p_inf {
+            // infection event 
+            let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
+            let index_case = i_cur[dist_infec.sample(&mut rng)];
+            let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
+                .iter()
+                .map(|(_, j, dur)| {
+                    if network_properties.nodal_states[*j] == State::Susceptible {
+                        dur_to_mins(*dur+1)/dur_to_mins(num_dur)
+                    }
+                    else {
+                        0.
+                    }
+                })
+                .collect::<Vec<f64>>()).unwrap();
+            let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
+
+            network_properties.nodal_states[new_case] = State::Infected(0);
+            network_properties.disease_from[new_case] = index_case as i64;
+            network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
+            network_properties.secondary_cases[index_case] += 1;
+            age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]]
+                [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==new_case).map(|(_,_,c)| *c).unwrap()] += 1;
+            i_cur.push(new_case);
+            update_sir(&mut sir, true);
+            i_events.push(new_case as i64);
+            r_events.push(-1);
+            ts.push(t);
+        }
+        else {
+            // recovery event 
+            let idx_rec = rng.gen_range(0..i_cur.len());
+            let rec_case = i_cur[idx_rec];
+            network_properties.nodal_states[rec_case] = State::Recovered;
+            i_cur.remove(idx_rec);
+            update_sir(&mut sir, false);
+            r_cur.push(rec_case);
+            i_events.push(-1);
+            r_events.push(rec_case as i64);
+            ts.push(t);
+        }
+    }
+    (sir, i_events, r_events, ts)
+}
+
+pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
     -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, f64) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
-    network_properties.initialize_infection_sellke_dur(network_structure, initially_infected, num_dur);
+    network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
     let mut sir: Vec<Vec<usize>> = Vec::new();
     sir.push(network_properties.count_states());
     let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
