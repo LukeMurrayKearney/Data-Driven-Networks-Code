@@ -58,7 +58,8 @@ impl NetworkProperties {
         let mut probabilities: Vec<f64> = network.degrees
             .iter()
             .map(|x| {
-                x.iter().enumerate().map(|(_, num_conts)| num_conts.to_owned() as f64).sum()
+                let tmp: f64 = x.iter().enumerate().map(|(_, num_conts)| num_conts.to_owned() as f64).sum();
+                if tmp > 0. {1.0} else {0.}
                 // x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * {if num_dur == 5 {dur_to_mins(dur_index+1)} else {dur_to_mins3(dur_index+1)}}).sum()
             })
             .collect();
