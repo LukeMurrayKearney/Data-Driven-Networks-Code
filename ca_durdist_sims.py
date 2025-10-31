@@ -10,7 +10,7 @@ import math
 n = 100_000
 num_networks= 20
 
-taus = np.arange(.05,1,.05)
+taus = np.arange(.05,.6,.05)
 
 
 buckets = np.array([5,12,18,30,40,50,60,70])
