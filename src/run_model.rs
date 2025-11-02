@@ -1399,13 +1399,23 @@ pub fn scale_fit(params: &ScaleParams, k: f64) -> f64 {
 
 pub fn dur_to_mins(duration: usize) -> f64 {
 
+    // match duration {
+    //     1 => 2.5,
+    //     2 => 10.,
+    //     3 => 37.5,
+    //     4 => 150.,
+    //     5 => 480.,
+    //     _ => 2.5
+    // }
+    
+    // duration with duration to the power of alpha = 0.69
     match duration {
-        1 => 2.5,
-        2 => 10.,
-        3 => 37.5,
-        4 => 150.,
-        5 => 480.,
-        _ => 2.5
+        1 => 1.88182228,
+        2 => 4.897788194,
+        3 => 12.192185866,
+        4 => 31.732403554,
+        5 => 70.803781599,
+        _ => 1.88182228
     }
 }
 
