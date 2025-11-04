@@ -61,7 +61,7 @@ impl ScaleParams {
     }
 }
 
-pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize) -> (Vec<Vec<usize>>, Vec<i64>, Vec<i64>, Vec<f64>) {
+pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize) -> (Vec<Vec<usize>>, Vec<i64>, Vec<i64>, Vec<i64>, Vec<f64>) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
@@ -79,7 +79,7 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
     let mut r_cur: Vec<usize> = Vec::new();
     let mut e_cur: Vec<usize> = Vec::new();
     let mut t = 0.;
-    let (mut i_events, mut r_events, mut ts): (Vec<i64>, Vec<i64>, Vec<f64>) = (i_cur.iter().map(|x| *x as i64).collect(), vec![-1; i_cur.len()], vec![0.; i_cur.len()]);
+    let (mut i_events, mut r_events, mut e_events, mut ts): (Vec<i64>, Vec<i64>, Vec<i64>, Vec<f64>) = (i_cur.iter().map(|x| *x as i64).collect(), vec![-1; i_cur.len()], vec![-1; i_cur.len()], vec![0.; i_cur.len()]);
     let beta = network_properties.parameters[0];
     let sigma = network_properties.parameters[1];
     let gamma = network_properties.parameters[2];
@@ -138,6 +138,7 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
                 [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==new_case).map(|(_,_,c)| *c).unwrap()] += 1;
             e_cur.push(new_case);
             update_seir(&mut sir, 1);
+            e_events.push(new_case as i64);
             i_events.push(-1);
             r_events.push(-1);
             ts.push(t);
@@ -154,6 +155,7 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
                     i_cur.push(trans_case);
                     e_cur.remove(idx_e);
                     update_seir(&mut sir, 0);
+                    e_events.push(-1);
                     i_events.push(trans_case as i64);
                     r_events.push(-1);
                     ts.push(t);
@@ -168,14 +170,15 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
             let rec_case = i_cur[idx_rec];
             network_properties.nodal_states[rec_case] = State::Recovered;
             i_cur.remove(idx_rec);
-            update_sir(&mut sir, false);
+            update_seir(&mut sir, 2);
             r_cur.push(rec_case);
+            e_events.push(-1);
             i_events.push(-1);
             r_events.push(rec_case as i64);
             ts.push(t);
         }
     }
-    (sir, i_events, r_events, ts)
+    (sir, e_events,i_events, r_events, ts)
 }
 
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)

@@ -110,7 +110,7 @@ fn small_gillespie_dur(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitio
     }
     let mut properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
-    let (sir, i_events, r_events, ts) = run_model::small_dur_g(&network, &mut properties, num_infec, tmp_num_dur);
+    let (sir, e_events, i_events, r_events, ts) = run_model::small_dur_g(&network, &mut properties, num_infec, tmp_num_dur);
                
     
     // Initialize the Python interpreter
@@ -130,6 +130,7 @@ fn small_gillespie_dur(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitio
         dict.set_item("sir", sir.to_object(py))?;
         dict.set_item("i_events", i_events.to_object(py))?;
         dict.set_item("r_events", r_events.to_object(py))?;
+        dict.set_item("e_events", e_events.to_object(py))?;
         dict.set_item("ts", ts.to_object(py))?;
     
         // Convert dict to PyObject and return
