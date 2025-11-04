@@ -15,14 +15,14 @@ from scipy.optimize import minimize
 plt.rcParams.update({'font.size': 14})  # Adjust the font size
 
 ################################## build into a package ##################################
-def small_dur_gillesp(degree_dist, partitions, num_dur=5, tau=1, inv_gamma=1/7, num_infec=1, props=[]):
+def small_dur_gillesp(degree_dist, partitions, num_dur=5, tau=1, gamma=1/4, sigma=1, num_infec=1, props=[]):
     partitions = [int(a) for a in partitions]
-    outbreak_params = [0,inv_gamma]
+    outbreak_params = [0, sigma, gamma]
     return nd_r.small_gillespie_dur(degree_dist, tau, partitions, outbreak_params, num_infec, num_dur, props)
 
-def gmm_dur_gillesp(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, inv_gamma=1/7, num_infec=1, props=[]):
+def gmm_dur_gillesp(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, props=[]):
     partitions = [int(a) for a in partitions]
-    outbreak_params = [0,inv_gamma]
+    outbreak_params = [0, sigma, gamma]
     return nd_r.gillesp_dur(degree_dist, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
 
 def gmm_dur_network(degree_dist, partitions, num_dur=5, props=[]):
