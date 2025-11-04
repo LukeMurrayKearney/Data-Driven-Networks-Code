@@ -1570,24 +1570,24 @@ pub fn scale_fit(params: &ScaleParams, k: f64) -> f64 {
 
 pub fn dur_to_mins(duration: usize) -> f64 {
 
-    // match duration {
-    //     1 => 3.,
-    //     2 => 10.,
-    //     3 => 37.5,
-    //     4 => 150.,
-    //     5 => 480.,
-    //     _ => 2.5
-    // }
+    match duration {
+        1 => 3.,
+        2 => 10.,
+        3 => 37.5,
+        4 => 150.,
+        5 => 480.,
+        _ => 3.
+    }
     
     // duration with duration to the power of alpha = 0.69
-    match duration {
-        1 => 2.134094594,
-        2 => 4.897788194,
-        3 => 12.192185866,
-        4 => 31.732403554,
-        5 => 70.803781599,
-        _ => 2.134094594
-    }
+    // match duration {
+    //     1 => 2.134094594,
+    //     2 => 4.897788194,
+    //     3 => 12.192185866,
+    //     4 => 31.732403554,
+    //     5 => 70.803781599,
+    //     _ => 2.134094594
+    // }
 }
 
 pub fn dur_to_mins3(duration: usize) -> f64 {
