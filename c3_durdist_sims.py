@@ -10,7 +10,7 @@ import math
 n = 100_000
 num_networks= 20
 
-taus = np.arange(2.21, 3.01 .05)
+taus = np.arange(2.21, 3.01, .05)
 
 
 
