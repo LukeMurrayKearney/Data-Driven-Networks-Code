@@ -20,6 +20,26 @@ def small_dur_gillesp(degree_dist, partitions, num_dur=5, tau=1, gamma=1/4, sigm
     outbreak_params = [0, sigma, gamma]
     return nd_r.small_gillespie_dur(degree_dist, tau, partitions, outbreak_params, num_infec, num_dur, props)
 
+def gmm_gillesp(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillespie_gmm(degree_dist, taus, iterations, partitions, outbreak_params, num_infec)
+
+def gmm_gillesp_sc(degree_dist, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillespie_gmm_sc(degree_dist, taus, iterations, partitions, outbreak_params, num_infec)
+
+def sbm_gillesp(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillespie_sbm(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec)
+
+def sbm_gillesp_sc(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillespie_sbm_sc(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec)
+
 def gmm_dur_gillesp(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, props=[]):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0, sigma, gamma]
