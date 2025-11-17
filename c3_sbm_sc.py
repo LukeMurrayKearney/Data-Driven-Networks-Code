@@ -10,8 +10,7 @@ import math
 n = 100_000
 num_networks= 40
 
-# find optimal taus for R0 = 1.5
-# taus2 = np.array([.2,.4,.6])
+taus2 = np.array([0.075])
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
