@@ -54,10 +54,12 @@ def fit_to_data(df = None, input_file_path = 'input_data/poly.csv', dist_type = 
     # print("Fitting complete.")
     return egos, contact_matrix, params
 
-def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom"):
+def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom", degree_dist=None):
     partitions = [int(a) for a in partitions]
     if dist_type == 'sbm':
         network = nd_r.sbm_from_vars(n, partitions, contact_matrix)
+    elif dist_type == 'gmm':
+        network = build_gmm(degree_dist, partitions)
     else:
         if params is None:
             print("Parameters are required")

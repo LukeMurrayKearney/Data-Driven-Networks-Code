@@ -192,6 +192,7 @@ impl NetworkStructure {
                     (tmp_edges, stubs_remaining) = connect_stubs_diagonal(&nodes_i, &mut rng);
                 }
                 else {
+                    let (nodes_i, nodes_j) = balance_stubs(&nodes_i, &nodes_j, &mut rng);
                     (tmp_edges, stubs_remaining) = connect_stubs(&nodes_i, &nodes_j, &mut rng);
                 }
                 // save lists of unconnected stubs
@@ -519,6 +520,30 @@ pub fn balance_stubs_dur(nodes_i: &Vec<(usize, Vec<usize>)>, nodes_j: &Vec<(usiz
                 let new_val = (nodes_j[idx].1[dur] as f64)*scale;
                 nodes_j[idx].1[dur] = stochastic_round(new_val, rng);
             }
+        }
+    }
+    (nodes_i, nodes_j)
+}
+
+pub fn balance_stubs(nodes_i: &Vec<(usize, usize)>, nodes_j: &Vec<(usize, usize)>, rng: &mut ThreadRng) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+    
+    let mut nodes_i = nodes_i.clone();
+    let mut nodes_j = nodes_j.clone();
+    
+    let total_i = nodes_i.iter().map(|(_, val)| val).sum::<usize>() as f64;
+    let total_j = nodes_j.iter().map(|(_, val)| val).sum::<usize>() as f64;
+    if total_i < total_j {
+        let scale = (total_i + total_j)/(2.0*total_i);
+        for idx in 0..nodes_i.len() {
+            let new_val = (nodes_i[idx].1 as f64)*scale;
+            nodes_i[idx].1 = stochastic_round(new_val, rng);
+        }
+    }
+    else {
+        let scale = (total_i + total_j)/(2.0*total_j);
+        for idx in 0..nodes_j.len() {
+            let new_val = (nodes_j[idx].1 as f64)*scale;
+            nodes_j[idx].1 = stochastic_round(new_val, rng);
         }
     }
     (nodes_i, nodes_j)

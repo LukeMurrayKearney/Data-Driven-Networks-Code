@@ -64,6 +64,18 @@ def gmm_dur(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), itera
     outbreak_params = [0,inv_gamma]
     return nd_r.sellke_dur(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur, props)
 
+def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom", degree_dist=None):
+    partitions = [int(a) for a in partitions]
+    if dist_type == 'sbm':
+        network = nd_r.sbm_from_vars(n, partitions, contact_matrix)
+    elif dist_type == 'gmm':
+        network = gmm_network(degree_dist, partitions)
+    else:
+        if params is None:
+            print("Parameters are required")
+        network = nd_r.network_from_vars(n, partitions, dist_type, params, contact_matrix)
+    return network
+
 def gmm_network(degree_dist, partitions):
     partitions = [int(a) for a in partitions]
     return nd_r.network_from_source_and_targets(partitions, degree_dist)
@@ -145,17 +157,7 @@ def fit_data_duration(df=None, buckets = np.array([5,12,18,30,40,50,60,70]), inp
     contact_matrix, num_per_bucket = make_contact_matrices(egos=egos, duration=True)
     
     return egos, contact_matrix
-        
 
-def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom"):
-    partitions = [int(a) for a in partitions]
-    if dist_type == 'sbm':
-        network = nd_r.sbm_from_vars(n, partitions, contact_matrix)
-    else:
-        if params is None:
-            print("Parameters are required")
-        network = nd_r.network_from_vars(n, partitions, dist_type, params, contact_matrix)
-    return network
 
 def to_networkx(network={}):
     G = nx.Graph()
