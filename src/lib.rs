@@ -150,6 +150,7 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
     let mut r07 = vec![vec![0.; iterations];taus.len()];
     let mut r08 = vec![vec![0.; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
+    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
     let mut avg_d = vec![0.;taus.len()]; 
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
     let mut tmp_num_dur = num_dur;
@@ -167,7 +168,7 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
 
         avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,f64)>
+        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -175,7 +176,7 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone();
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
         }
     }
     
@@ -193,6 +194,7 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
         dict.set_item("r06", r06.to_object(py))?;
         dict.set_item("r07", r07.to_object(py))?;
         dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("max_gen", max_gen.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
@@ -269,6 +271,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
+    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
 
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
@@ -279,7 +282,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
 
         avg_d[i] = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,f64)>
+        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -287,7 +290,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone();
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
         }
     }
     
@@ -305,6 +308,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
         dict.set_item("r06", r06.to_object(py))?;
         dict.set_item("r07", r07.to_object(py))?;
         dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("max_gen", max_gen.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
@@ -326,6 +330,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
     let mut r06 = vec![vec![0.; iterations];taus.len()]; 
     let mut r07 = vec![vec![0.; iterations];taus.len()];
     let mut r08 = vec![vec![0.; iterations];taus.len()];
+    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()]; 
     let mut avg_d = vec![0.;taus.len()]; 
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
@@ -339,7 +344,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
 
         avg_d[i] = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
 
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,f64)>
+        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -347,7 +352,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone();
+            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
         }
     }
     
@@ -368,6 +373,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
+        dict.set_item("max_gen", max_gen.to_object(py))?;
     
         // Convert dict to PyObject and return
         Ok(dict.into())

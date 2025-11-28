@@ -182,7 +182,7 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
 }
 
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
-    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, f64) {
+    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, usize) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
@@ -202,7 +202,6 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
     let beta = network_properties.parameters[0];
     let sigma = network_properties.parameters[1];
     let gamma = network_properties.parameters[2];
-    let mut cur_min_gen = 0;
 
     while i_cur.len() + e_cur.len() > 0 {
 
@@ -257,7 +256,6 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
             age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]]
                 [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==new_case).map(|(_,_,c)| *c).unwrap()] += 1;
             e_cur.push(new_case);
-            cur_min_gen = i_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
         }
         else if u2 < p_inf + p_trans {
             // transition to infective event
@@ -291,26 +289,22 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
     let sc6: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 6).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc7: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc8: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 8).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    if cur_min_gen >= 3 {
-        ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-        (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
-        (sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64),
-        (sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64),
-        if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
-        if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
-        if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
-        if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
-        if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
-        age_dur_sc,
-        beta)
-    } 
-    else {
-        (-1., -1., -1., -1., -1., -1., -1., -1., -1., Vec::new(), beta)
-    }
+    
+    ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
+    (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
+    if sc2.len() > 0 {(sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64)} else {0.},
+    if sc3.len() > 0 {(sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64)} else {0.},
+    if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
+    if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
+    if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
+    if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
+    if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
+    age_dur_sc,
+    network_properties.generation.iter().max().unwrap().to_owned())
 }
 
 pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize)
-    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<usize>>, f64) {
+    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<usize>>, usize) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
@@ -344,7 +338,6 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
     let beta = network_properties.parameters[0];
     let sigma = network_properties.parameters[1];
     let gamma = network_properties.parameters[2];
-    let mut cur_min_gen = 0;
 
     while i_cur.len() + e_cur.len() > 0 {
 
@@ -398,7 +391,6 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
             network_properties.secondary_cases[index_case] += 1;
             age_sc[network_structure.ages[index_case]][network_structure.ages[new_case]] += 1;
             e_cur.push(new_case);
-            cur_min_gen = i_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
         }
         else if u2 < p_inf + p_trans {
             // transition to infective event
@@ -432,22 +424,18 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
     let sc6: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 6).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc7: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc8: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 8).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    if cur_min_gen >= 3 {
-        ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-        (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
-        (sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64),
-        (sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64),
-        if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
-        if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
-        if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
-        if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
-        if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
-        age_sc,
-        beta)
-    } 
-    else {
-        (-1., -1., -1., -1., -1., -1., -1., -1., -1., Vec::new(), beta)
-    }
+    
+    ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
+    (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
+    if sc2.len() > 0 {(sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64)} else {0.},
+    if sc3.len() > 0 {(sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64)} else {0.},
+    if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
+    if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
+    if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
+    if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
+    if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
+    age_sc,
+    network_properties.generation.iter().max().unwrap().to_owned())
 }
 
 
@@ -471,7 +459,7 @@ pub fn dur_gillesp_sc(network_structure: &NetworkStructureDuration, network_prop
     let gamma = network_properties.parameters[2];
     let mut cur_min_gen = 0;
 
-    while i_cur.len() + e_cur.len() > 0 && cur_min_gen < 3 {
+    while i_cur.len() + e_cur.len() > 0 && cur_min_gen < 4 {
 
         let mut rate_pp = Vec::new();
         let rate_inf = i_cur.iter().map(|&i| {
@@ -547,13 +535,7 @@ pub fn dur_gillesp_sc(network_structure: &NetworkStructureDuration, network_prop
     let sc: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    if cur_min_gen >= 3 {
-        (sc, sc2, sc3)
-    } 
-    else {
-        (Vec::new(), Vec::new(), Vec::new())
-    }
-
+    (sc, sc2, sc3)
 }
 
 pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize)
@@ -589,7 +571,7 @@ pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut
     let gamma = network_properties.parameters[2];
     let mut cur_min_gen = 0;
 
-    while i_cur.len() + e_cur.len() > 0 && cur_min_gen < 3 {
+    while i_cur.len() + e_cur.len() > 0 && cur_min_gen < 4 {
 
         let mut rate_pp = Vec::new();
         let rate_inf = i_cur.iter().map(|&i| {
@@ -666,13 +648,7 @@ pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut
     let sc: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    if cur_min_gen >= 3 {
-        (sc, sc2, sc3)
-    } 
-    else {
-        (Vec::new(), Vec::new(), Vec::new())
-    }
-
+    (sc, sc2, sc3)
 }
 
 ////// SIR not SEIR
