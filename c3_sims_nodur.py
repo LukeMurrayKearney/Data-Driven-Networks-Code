@@ -10,7 +10,7 @@ import math
 n = 100_000
 num_networks= 20
 
-taus1 = np.arange(.0001, .0051, .0001)
+taus1 = np.arange(.00005, .00175, .0001)
 taus2 = np.arange(.00001, .0001, .00001)
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -47,10 +47,10 @@ for i, data in enumerate(datas):
             for sample in samples_tmp:
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_gillesp(samples,partitions=partitions,taus=taus1, iterations=48, num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k+160}_nodur.json','w') as f:
+        res = nd_p.gmm_gillesp(samples,partitions=partitions,taus=taus1, iterations=48, num_infec=1)
+        with open(f'duration+ages/seir_sims/{data}_{k}_nodur_gen1.json','w') as f:
             json.dump(res, f)
-        res = nd_p.gmm_gillesp(samples,partitions=partitions,taus=taus2, iterations=48, num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k+180}_nodur.json','w') as f:
+        res = nd_p.gmm_gillesp(samples,partitions=partitions,taus=taus2, iterations=48, num_infec=1)
+        with open(f'duration+ages/seir_sims/{data}_{k+20}_nodur_gen1.json','w') as f:
             json.dump(res, f)
 
