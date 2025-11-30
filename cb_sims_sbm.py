@@ -8,7 +8,7 @@ n = 100_000
 num_networks= 20
 
 taus2 = np.arange(0.05, 3, 0.1)
-taus1 = np.arange(3, 10, 0.5)
+taus1 = np.arange(3, 20, 0.5)
 taus = np.concatenate((taus2, taus1))
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -31,5 +31,5 @@ for i, data in enumerate(datas):
 
     for k in range(num_networks):
         res = nd_p.sbm_gillesp(contact_matrix=cm, partitions=partitions, taus=taus, iterations=48, num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+80}_sbm_gen1.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+100}_sbm_gen1.json','w') as f:
             json.dump(res, f)
