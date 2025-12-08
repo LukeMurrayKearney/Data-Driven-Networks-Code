@@ -182,129 +182,160 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
 }
 
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
-    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<Vec<usize>>>, usize) {
+    -> (f64, f64, f64, f64, f64, usize, f64, Vec<Vec<Vec<usize>>>, Vec<Vec<Vec<usize>>>, usize) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
-    network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
+    // network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
+    let mut probabilities: Vec<f64> = network_structure.degrees
+        .iter()
+        .map(|x| {
+            // x.iter().enumerate().map(|(_, num_conts)| num_conts.to_owned() as f64).sum()
+            x.iter().enumerate().map(|(dur_index, num_conts)| (num_conts.to_owned() as f64) * {if num_dur == 5 {dur_to_mins(dur_index+1)} else {dur_to_mins3(dur_index+1)}}).sum()
+        })
+        .collect();
+
+    let mut selected: Vec<usize> = Vec::new();
+    for _ in 0..initially_infected {
+        let dist = WeightedIndex::new(&probabilities).unwrap();
+        let i = dist.sample(&mut rng);
+        selected.push(i);
+        probabilities[i] = 0.;
+    }
+
+    // infect selected individuals
+    for &i in selected.iter() {
+        network_properties.nodal_states[i] = State::Infected;
+        network_properties.generation[i] = 1;
+    }
     let mut seir: Vec<Vec<usize>> = Vec::new();
     let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
+    let (mut peak_height, mut time_to_peak) = (0, 0.);
     
-    let mut i_cur: Vec<usize> = network_properties.nodal_states
-        .iter()
-        .enumerate()
-        .filter(|(_,&state)| state == State::Infected)
-        .map(|(i,_)| i)
-        .collect();
     let mut r_cur: Vec<usize> = Vec::new();
     let mut e_cur: Vec<usize> = Vec::new();
-    let mut t = 0.;
-    let beta = network_properties.parameters[0];
-    let sigma = network_properties.parameters[1];
-    let gamma = network_properties.parameters[2];
+    let mut attempts = 0;
+    loop {
+        let mut i_cur: Vec<usize> = network_properties.nodal_states
+            .iter()
+            .enumerate()
+            .filter(|(_,&state)| state == State::Infected)
+            .map(|(i,_)| i)
+            .collect();
+        r_cur = Vec::new();
+        e_cur = Vec::new();
+        let mut t = 0.;
+        let beta = network_properties.parameters[0];
+        let sigma = network_properties.parameters[1];
+        let gamma = network_properties.parameters[2];
 
-    while i_cur.len() + e_cur.len() > 0 {
+        while i_cur.len() + e_cur.len() > 0 {
 
-        let mut rate_pp = Vec::new();
-        let rate_inf = i_cur.iter().map(|&i| {
-            rate_pp.push(
-                network_structure.adjacency_matrix[i]  
+            let mut rate_pp = Vec::new();
+            let rate_inf = i_cur.iter().map(|&i| {
+                rate_pp.push(
+                    network_structure.adjacency_matrix[i]  
+                        .iter()
+                        .map(|link| {
+                            if network_properties.nodal_states[link.1] == State::Susceptible {
+                            dur_to_mins(link.2+1)/dur_to_mins(num_dur)
+                            }
+                            else {
+                                0.
+                            }
+                        }).sum::<f64>()
+                    );                
+                rate_pp.last().unwrap().to_owned()
+            }).sum::<f64>() * beta;
+            let rate_rec = i_cur.len() as f64 * gamma;
+            let rate_trans = e_cur.len() as f64 * sigma;
+            let rate_total = rate_inf + rate_rec + rate_trans;
+
+            // time to next event
+            let u1 = rng.gen::<f64>();
+            let dt = (1.0 / u1).ln() / rate_total;
+            t += dt;
+            let p_inf = rate_inf / rate_total;
+            let p_trans = rate_trans / rate_total;
+            let u2 = rng.gen::<f64>();
+            if u2 < p_inf {
+                // infection event 
+                let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
+                let index_case = i_cur[dist_infec.sample(&mut rng)];
+                let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
                     .iter()
-                    .map(|link| {
-                        if network_properties.nodal_states[link.1] == State::Susceptible {
-                        dur_to_mins(link.2+1)/dur_to_mins(num_dur)
+                    .map(|(_, j, dur)| {
+                        if network_properties.nodal_states[*j] == State::Susceptible {
+                            dur_to_mins(*dur+1)/dur_to_mins(num_dur)
                         }
                         else {
                             0.
                         }
-                    }).sum::<f64>()
-                );                
-            rate_pp.last().unwrap().to_owned()
-        }).sum::<f64>() * beta;
-        let rate_rec = i_cur.len() as f64 * gamma;
-        let rate_trans = e_cur.len() as f64 * sigma;
-        let rate_total = rate_inf + rate_rec + rate_trans;
+                    })
+                    .collect::<Vec<f64>>()).unwrap();
+                let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
 
-        // time to next event
-        let u1 = rng.gen::<f64>();
-        let dt = (1.0 / u1).ln() / rate_total;
-        t += dt;
-        let p_inf = rate_inf / rate_total;
-        let p_trans = rate_trans / rate_total;
-        let u2 = rng.gen::<f64>();
-        if u2 < p_inf {
-            // infection event 
-            let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
-            let index_case = i_cur[dist_infec.sample(&mut rng)];
-            let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
-                .iter()
-                .map(|(_, j, dur)| {
-                    if network_properties.nodal_states[*j] == State::Susceptible {
-                        dur_to_mins(*dur+1)/dur_to_mins(num_dur)
-                    }
-                    else {
-                        0.
-                    }
-                })
-                .collect::<Vec<f64>>()).unwrap();
-            let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
-
-            network_properties.nodal_states[new_case] = State::Exposed1;
-            network_properties.disease_from[new_case] = index_case as i64;
-            network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
-            network_properties.secondary_cases[index_case] += 1;
-            age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]]
-                [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==new_case).map(|(_,_,c)| *c).unwrap()] += 1;
-            e_cur.push(new_case);
-        }
-        else if u2 < p_inf + p_trans {
-            // transition to infective event
-            let idx_e = rng.gen_range(0..e_cur.len());
-            let trans_case = e_cur[idx_e];
-            match network_properties.nodal_states[trans_case] {
-                State::Exposed1 => network_properties.nodal_states[trans_case] = State::Exposed2,
-                State::Exposed2 => network_properties.nodal_states[trans_case] = State::Exposed3,
-                State::Exposed3 => {
-                    network_properties.nodal_states[trans_case] = State::Infected;
-                    i_cur.push(trans_case);
-                    e_cur.remove(idx_e);
-                },
-                _ => println!("Error in exposure transition"),
+                network_properties.nodal_states[new_case] = State::Exposed1;
+                network_properties.disease_from[new_case] = index_case as i64;
+                network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
+                network_properties.secondary_cases[index_case] += 1;
+                age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]]
+                    [network_structure.adjacency_matrix[index_case].iter().find(|(_,b,_)| *b==new_case).map(|(_,_,c)| *c).unwrap()] += 1;
+                e_cur.push(new_case);
+            }
+            else if u2 < p_inf + p_trans {
+                // transition to infective event
+                let idx_e = rng.gen_range(0..e_cur.len());
+                let trans_case = e_cur[idx_e];
+                match network_properties.nodal_states[trans_case] {
+                    State::Exposed1 => network_properties.nodal_states[trans_case] = State::Exposed2,
+                    State::Exposed2 => network_properties.nodal_states[trans_case] = State::Exposed3,
+                    State::Exposed3 => {
+                        network_properties.nodal_states[trans_case] = State::Infected;
+                        i_cur.push(trans_case);
+                        e_cur.remove(idx_e);
+                    },
+                    _ => println!("Error in exposure transition"),
+                }
+            }
+            else {
+                // recovery event 
+                let idx_rec = rng.gen_range(0..i_cur.len());
+                let rec_case = i_cur[idx_rec];
+                network_properties.nodal_states[rec_case] = State::Recovered;
+                i_cur.remove(idx_rec);
+                r_cur.push(rec_case);
+            }
+            if i_cur.len() > peak_height {
+                peak_height = i_cur.len();
+                time_to_peak = t;
             }
         }
-        else {
-            // recovery event 
-            let idx_rec = rng.gen_range(0..i_cur.len());
-            let rec_case = i_cur[idx_rec];
-            network_properties.nodal_states[rec_case] = State::Recovered;
-            i_cur.remove(idx_rec);
-            r_cur.push(rec_case);
+        if r_cur.len() > initially_infected || attempts >= 2 {
+            break;
         }
+        attempts += 1;
     }
-    let sc: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc5: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 5).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc6: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 6).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc7: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc8: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 8).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    
+
+    let I1: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+
     ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-    (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
-    if sc2.len() > 0 {(sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64)} else {0.},
-    if sc3.len() > 0 {(sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64)} else {0.},
-    if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
-    if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
-    if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
-    if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
-    if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
+    (I1.iter().sum::<usize>() as f64)/(I1.len() as f64),
+    if I2.len() > 0 {(I2.iter().sum::<usize>() as f64)/(I2.len() as f64)} else {0.},
+    if I3.len() > 0 {(I3.iter().sum::<usize>() as f64)/(I3.len() as f64)} else {0.},
+    if I4.len() > 0 {(I4.iter().sum::<usize>() as f64)/(I4.len() as f64)} else {0.},
+    peak_height,
+    time_to_peak,
+    selected.iter().map(|&i| network_structure.frequency_distribution[i].clone()).collect(),
     age_dur_sc,
     network_properties.generation.iter().max().unwrap().to_owned())
 }
 
 pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize)
-    -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, Vec<Vec<usize>>, usize) {
+    -> (f64, f64, f64, f64, f64, usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
@@ -320,120 +351,130 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
     // infect selected individuals
     for &i in selected.iter() {
         network_properties.nodal_states[i] = State::Infected;
-        // network_properties.nodal_states[i] = State::Infected(poisson_infectious_period.sample(&mut rng).round() as usize);
         network_properties.generation[i] = 1;
     }
+
     let mut seir: Vec<Vec<usize>> = Vec::new();
     let mut age_sc: Vec<Vec<usize>> = vec![vec![0; network_structure.partitions.len()]; network_structure.partitions.len()];
-    
-    let mut i_cur: Vec<usize> = network_properties.nodal_states
-        .iter()
-        .enumerate()
-        .filter(|(_,&state)| state == State::Infected)
-        .map(|(i,_)| i)
-        .collect();
+    let (mut peak_height, mut time_to_peak) = (0, 0.);
     let mut r_cur: Vec<usize> = Vec::new();
     let mut e_cur: Vec<usize> = Vec::new();
-    let mut t = 0.;
-    let beta = network_properties.parameters[0];
-    let sigma = network_properties.parameters[1];
-    let gamma = network_properties.parameters[2];
+    let mut attempts = 0;
+    loop {
+        let mut i_cur: Vec<usize> = network_properties.nodal_states
+            .iter()
+            .enumerate()
+            .filter(|(_,&state)| state == State::Infected)
+            .map(|(i,_)| i)
+            .collect();
+        r_cur = Vec::new();
+        e_cur = Vec::new();
+        let mut t = 0.;
+        let beta = network_properties.parameters[0];
+        let sigma = network_properties.parameters[1];
+        let gamma = network_properties.parameters[2];
 
-    while i_cur.len() + e_cur.len() > 0 {
+    
+        while i_cur.len() + e_cur.len() > 0 {
 
-        let mut rate_pp = Vec::new();
-        let rate_inf = i_cur.iter().map(|&i| {
-            rate_pp.push(
-                network_structure.adjacency_matrix[i]  
+            let mut rate_pp = Vec::new();
+            let rate_inf = i_cur.iter().map(|&i| {
+                rate_pp.push(
+                    network_structure.adjacency_matrix[i]  
+                        .iter()
+                        .map(|link| {
+                            if network_properties.nodal_states[link.1] == State::Susceptible {
+                                1.
+                            }
+                            else {
+                                0.
+                            }
+                        }).sum::<f64>()
+                    );                
+                rate_pp.last().unwrap().to_owned()
+            }).sum::<f64>() * beta;
+            let rate_rec = i_cur.len() as f64 * gamma;
+            let rate_trans = e_cur.len() as f64 * sigma;
+            let rate_total = rate_inf + rate_rec + rate_trans;
+
+            // time to next event
+            let u1 = rng.gen::<f64>();
+            let dt = (1.0 / u1).ln() / rate_total;
+            t += dt;
+            let p_inf = rate_inf / rate_total;
+            let p_trans = rate_trans / rate_total;
+            let u2 = rng.gen::<f64>();
+            if u2 < p_inf {
+                // infection event 
+                let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
+                let index_case = i_cur[dist_infec.sample(&mut rng)];
+                let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
                     .iter()
-                    .map(|link| {
-                        if network_properties.nodal_states[link.1] == State::Susceptible {
+                    .map(|(_, j)| {
+                        if network_properties.nodal_states[*j] == State::Susceptible {
                             1.
                         }
                         else {
                             0.
                         }
-                    }).sum::<f64>()
-                );                
-            rate_pp.last().unwrap().to_owned()
-        }).sum::<f64>() * beta;
-        let rate_rec = i_cur.len() as f64 * gamma;
-        let rate_trans = e_cur.len() as f64 * sigma;
-        let rate_total = rate_inf + rate_rec + rate_trans;
+                    })
+                    .collect::<Vec<f64>>()).unwrap();
+                let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
 
-        // time to next event
-        let u1 = rng.gen::<f64>();
-        let dt = (1.0 / u1).ln() / rate_total;
-        t += dt;
-        let p_inf = rate_inf / rate_total;
-        let p_trans = rate_trans / rate_total;
-        let u2 = rng.gen::<f64>();
-        if u2 < p_inf {
-            // infection event 
-            let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
-            let index_case = i_cur[dist_infec.sample(&mut rng)];
-            let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
-                .iter()
-                .map(|(_, j)| {
-                    if network_properties.nodal_states[*j] == State::Susceptible {
-                        1.
-                    }
-                    else {
-                        0.
-                    }
-                })
-                .collect::<Vec<f64>>()).unwrap();
-            let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
-
-            network_properties.nodal_states[new_case] = State::Exposed1;
-            network_properties.disease_from[new_case] = index_case as i64;
-            network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
-            network_properties.secondary_cases[index_case] += 1;
-            age_sc[network_structure.ages[index_case]][network_structure.ages[new_case]] += 1;
-            e_cur.push(new_case);
-        }
-        else if u2 < p_inf + p_trans {
-            // transition to infective event
-            let idx_e = rng.gen_range(0..e_cur.len());
-            let trans_case = e_cur[idx_e];
-            match network_properties.nodal_states[trans_case] {
-                State::Exposed1 => network_properties.nodal_states[trans_case] = State::Exposed2,
-                State::Exposed2 => network_properties.nodal_states[trans_case] = State::Exposed3,
-                State::Exposed3 => {
-                    network_properties.nodal_states[trans_case] = State::Infected;
-                    i_cur.push(trans_case);
-                    e_cur.remove(idx_e);
-                },
-                _ => println!("Error in exposure transition"),
+                network_properties.nodal_states[new_case] = State::Exposed1;
+                network_properties.disease_from[new_case] = index_case as i64;
+                network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
+                network_properties.secondary_cases[index_case] += 1;
+                age_sc[network_structure.ages[index_case]][network_structure.ages[new_case]] += 1;
+                e_cur.push(new_case);
+            }
+            else if u2 < p_inf + p_trans {
+                // transition to infective event
+                let idx_e = rng.gen_range(0..e_cur.len());
+                let trans_case = e_cur[idx_e];
+                match network_properties.nodal_states[trans_case] {
+                    State::Exposed1 => network_properties.nodal_states[trans_case] = State::Exposed2,
+                    State::Exposed2 => network_properties.nodal_states[trans_case] = State::Exposed3,
+                    State::Exposed3 => {
+                        network_properties.nodal_states[trans_case] = State::Infected;
+                        i_cur.push(trans_case);
+                        e_cur.remove(idx_e);
+                    },
+                    _ => println!("Error in exposure transition"),
+                }
+            }
+            else {
+                // recovery event 
+                let idx_rec = rng.gen_range(0..i_cur.len());
+                let rec_case = i_cur[idx_rec];
+                network_properties.nodal_states[rec_case] = State::Recovered;
+                i_cur.remove(idx_rec);
+                r_cur.push(rec_case);
+            }
+            if i_cur.len() > peak_height {
+                peak_height = i_cur.len();
+                time_to_peak = t;
             }
         }
-        else {
-            // recovery event 
-            let idx_rec = rng.gen_range(0..i_cur.len());
-            let rec_case = i_cur[idx_rec];
-            network_properties.nodal_states[rec_case] = State::Recovered;
-            i_cur.remove(idx_rec);
-            r_cur.push(rec_case);
+        if r_cur.len() > initially_infected || attempts >= 2 {
+            break;
         }
+        attempts += 1;
     }
-    let sc: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc5: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 5).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc6: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 6).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc7: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 7).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let sc8: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 8).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    
+
+    let I1: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+
     ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-    (sc.iter().sum::<usize>() as f64)/(sc.len() as f64),
-    if sc2.len() > 0 {(sc2.iter().sum::<usize>() as f64)/(sc2.len() as f64)} else {0.},
-    if sc3.len() > 0 {(sc3.iter().sum::<usize>() as f64)/(sc3.len() as f64)} else {0.},
-    if sc4.len() > 0 {(sc4.iter().sum::<usize>() as f64)/(sc4.len() as f64)} else {0.},
-    if sc5.len() > 0 {(sc5.iter().sum::<usize>() as f64)/(sc5.len() as f64)} else {0.},
-    if sc6.len() > 0 {(sc6.iter().sum::<usize>() as f64)/(sc6.len() as f64)} else {0.},
-    if sc7.len() > 0 {(sc7.iter().sum::<usize>() as f64)/(sc7.len() as f64)} else {0.},
-    if sc8.len() > 0 {(sc8.iter().sum::<usize>() as f64)/(sc8.len() as f64)} else {0.},
+    (I1.iter().sum::<usize>() as f64)/(I1.len() as f64),
+    if I2.len() > 0 {(I2.iter().sum::<usize>() as f64)/(I2.len() as f64)} else {0.},
+    if I3.len() > 0 {(I3.iter().sum::<usize>() as f64)/(I3.len() as f64)} else {0.},
+    if I4.len() > 0 {(I4.iter().sum::<usize>() as f64)/(I4.len() as f64)} else {0.},
+    peak_height,
+    time_to_peak,
+    selected.iter().map(|&i| network_structure.frequency_distribution[i].clone()).collect(),
     age_sc,
     network_properties.generation.iter().max().unwrap().to_owned())
 }

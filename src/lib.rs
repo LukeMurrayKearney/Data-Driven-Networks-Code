@@ -141,34 +141,33 @@ fn small_gillespie_dur(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitio
 #[pyfunction]
 fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
-    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r02 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r03 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r04 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r05 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r06 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r07 = vec![vec![0.; iterations];taus.len()];
-    let mut r08 = vec![vec![0.; iterations];taus.len()];
-    let mut fs = vec![vec![0.; iterations];taus.len()]; 
-    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
-    let mut avg_d = vec![0.;taus.len()]; 
+    let mut I1 = vec![vec![0.; iterations];taus.len()];
+    let mut I2 = vec![vec![0.; iterations];taus.len()];
+    let mut I3 = vec![vec![0.; iterations];taus.len()];
+    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut fs = vec![vec![0.; iterations];taus.len()];
+    let mut peak_heights = vec![vec![0; iterations];taus.len()];
+    let mut peak_times = vec![vec![0.; iterations];taus.len()];
+    let mut initial_infected = vec![vec![Vec::new(); iterations];taus.len()];
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
+    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
     let mut tmp_num_dur = num_dur;
 
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+        tmp_num_dur = 5;
+    }
+    let avg_d = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
+    
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
-        if props.len() > 0 {
-            network.transform(&props);
-            tmp_num_dur = 5;
-        }
+        
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
-        avg_d[i] = network.degrees.iter().map(|x| (x.iter().sum::<usize>() as f64)).sum::<f64>() / (network.degrees.len() as f64);
-
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<Vec<usize>>>,usize)>
+        let results: Vec<(f64,f64,f64,f64,f64,usize,f64,Vec<Vec<Vec<usize>>>,Vec<Vec<Vec<usize>>>,usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -176,29 +175,29 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
+            fs[i][k] = sim.0; I1[i][k] = sim.1; I2[i][k] = sim.2; I3[i][k] = sim.3; I4[i][k] = sim.4; peak_heights[i][k] = sim.5; peak_times[i][k] = sim.6; initial_infected[i][k] = sim.7.clone(); age_dur_breakdown[i][k] = sim.8.clone(); max_gen[i][k] = sim.9;
         }
     }
-    
+    let tmp_edge_list = network.adjacency_matrix.iter().map(|x| x.iter().map(|y| (y.0, y.1)).collect::<Vec<(usize, usize)>>()).collect::<Vec<Vec<(usize, usize)>>>();
     // Initialize the Python interpreter
     Python::with_gil(|py| {
         // Create output PyDict
         let dict = PyDict::new_bound(py);
         
         dict.set_item("fs", fs.to_object(py))?;
-        dict.set_item("r0", r0.to_object(py))?;
-        dict.set_item("r02", r02.to_object(py))?;
-        dict.set_item("r03", r03.to_object(py))?;
-        dict.set_item("r04", r04.to_object(py))?;
-        dict.set_item("r05", r05.to_object(py))?;
-        dict.set_item("r06", r06.to_object(py))?;
-        dict.set_item("r07", r07.to_object(py))?;
-        dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("I1", I1.to_object(py))?;
+        dict.set_item("I2", I2.to_object(py))?;
+        dict.set_item("I3", I3.to_object(py))?;
+        dict.set_item("I4", I4.to_object(py))?;
+        dict.set_item("peak_heights", peak_heights.to_object(py))?;
+        dict.set_item("peak_times", peak_times.to_object(py))?;
+        dict.set_item("initial_infected", initial_infected.to_object(py))?;
         dict.set_item("max_gen", max_gen.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
         dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
+        dict.set_item("largest_connected_component", network_structure::largest_cc(tmp_edge_list).to_object(py))?;
     
         // Convert dict to PyObject and return
         Ok(dict.into())
@@ -213,15 +212,16 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
     let mut r03 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut tmp_num_dur = num_dur;
 
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+        tmp_num_dur = 5;
+    }
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
-        if props.len() > 0 {
-            network.transform(&props);
-            tmp_num_dur = 5;
-        }
+        
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
         let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>
@@ -260,29 +260,26 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
 #[pyfunction]
 fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
     
-    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r02 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r03 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r04 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r05 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r06 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r07 = vec![vec![0.; iterations];taus.len()];
-    let mut r08 = vec![vec![0.; iterations];taus.len()];
-    let mut fs = vec![vec![0.; iterations];taus.len()]; 
-    let mut avg_d = vec![0.;taus.len()]; 
+    let mut I1 = vec![vec![0.; iterations];taus.len()];
+    let mut I2 = vec![vec![0.; iterations];taus.len()];
+    let mut I3 = vec![vec![0.; iterations];taus.len()];
+    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut fs = vec![vec![0.; iterations];taus.len()];
+    let mut peak_heights = vec![vec![0; iterations];taus.len()];
+    let mut peak_times = vec![vec![0.; iterations];taus.len()];
+    let mut initial_infected = vec![vec![Vec::new(); iterations];taus.len()];
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
     let mut max_gen = vec![vec![0usize; iterations];taus.len()];
 
+    let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
+    let avg_d = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
         let properties = network_properties::NetworkProperties::new(&network, &cur_params);
 
-        avg_d[i] = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
-
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,usize)>
+        let results: Vec<(f64,f64,f64,f64,f64,usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -290,7 +287,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
+            fs[i][k] = sim.0; I1[i][k] = sim.1; I2[i][k] = sim.2; I3[i][k] = sim.3; I4[i][k] = sim.4; peak_heights[i][k] = sim.5; peak_times[i][k] = sim.6; initial_infected[i][k] = sim.7.clone(); age_dur_breakdown[i][k] = sim.8.clone(); max_gen[i][k] = sim.9;
         }
     }
     
@@ -298,22 +295,21 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
     Python::with_gil(|py| {
         // Create output PyDict
         let dict = PyDict::new_bound(py);
-        
+         
         dict.set_item("fs", fs.to_object(py))?;
-        dict.set_item("r0", r0.to_object(py))?;
-        dict.set_item("r02", r02.to_object(py))?;
-        dict.set_item("r03", r03.to_object(py))?;
-        dict.set_item("r04", r04.to_object(py))?;
-        dict.set_item("r05", r05.to_object(py))?;
-        dict.set_item("r06", r06.to_object(py))?;
-        dict.set_item("r07", r07.to_object(py))?;
-        dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("I1", I1.to_object(py))?;
+        dict.set_item("I2", I2.to_object(py))?;
+        dict.set_item("I3", I3.to_object(py))?;
+        dict.set_item("I4", I4.to_object(py))?;
+        dict.set_item("peak_heights", peak_heights.to_object(py))?;
+        dict.set_item("peak_times", peak_times.to_object(py))?;
+        dict.set_item("initial_infected", initial_infected.to_object(py))?;
         dict.set_item("max_gen", max_gen.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
         dict.set_item("avg_d_input", degree_age_breakdown.iter().map(|x| x.iter().sum::<usize>() as f64).sum::<f64>().to_object(py))?;
-    
+        dict.set_item("largest_connected_component", network_structure::largest_cc(network.adjacency_matrix.clone()).to_object(py))?;
         // Convert dict to PyObject and return
         Ok(dict.into())
     })
@@ -322,29 +318,26 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
 #[pyfunction]
 fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
     
-    let mut r0 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r02 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r03 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r04 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r05 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r06 = vec![vec![0.; iterations];taus.len()]; 
-    let mut r07 = vec![vec![0.; iterations];taus.len()];
-    let mut r08 = vec![vec![0.; iterations];taus.len()];
-    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
-    let mut fs = vec![vec![0.; iterations];taus.len()]; 
-    let mut avg_d = vec![0.;taus.len()]; 
+    let mut I1 = vec![vec![0.; iterations];taus.len()];
+    let mut I2 = vec![vec![0.; iterations];taus.len()];
+    let mut I3 = vec![vec![0.; iterations];taus.len()];
+    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut fs = vec![vec![0.; iterations];taus.len()];
+    let mut peak_heights = vec![vec![0; iterations];taus.len()];
+    let mut peak_times = vec![vec![0.; iterations];taus.len()];
+    let mut initial_infected = vec![vec![Vec::new(); iterations];taus.len()];
     let mut age_dur_breakdown = vec![vec![Vec::new(); iterations];taus.len()];
+    let mut max_gen = vec![vec![0usize; iterations];taus.len()];
 
+    let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_sbm_from_vars(partitions.last().unwrap().to_owned(), &partitions, &contact_matrix);
+    let avg_d = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
     for (i, &tau) in taus.iter().enumerate() {
         println!("{i}");
         let mut cur_params = outbreak_params.clone();
         cur_params[0] = tau;
-        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_sbm_from_vars(partitions.last().unwrap().to_owned(), &partitions, &contact_matrix);
         let properties = network_properties::NetworkProperties::new(&network, &cur_params);
 
-        avg_d[i] = (network.degrees.iter().sum::<usize>() as f64) / (network.degrees.len() as f64);
-
-        let results: Vec<(f64,f64,f64,f64,f64,f64,f64,f64,f64,Vec<Vec<usize>>,usize)>
+        let results: Vec<(f64,f64,f64,f64,f64,usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -352,7 +345,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
                 })
                 .collect();
         for (k, sim) in results.iter().enumerate() {
-            fs[i][k] = sim.0; r0[i][k] = sim.1; r02[i][k] = sim.2; r03[i][k] = sim.3; r04[i][k] = sim.4; r05[i][k] = sim.5; r06[i][k] = sim.6; r07[i][k] = sim.7; r08[i][k] = sim.8; age_dur_breakdown[i][k] = sim.9.clone(); max_gen[i][k] = sim.10.clone();
+            fs[i][k] = sim.0; I1[i][k] = sim.1; I2[i][k] = sim.2; I3[i][k] = sim.3; I4[i][k] = sim.4; peak_heights[i][k] = sim.5; peak_times[i][k] = sim.6; initial_infected[i][k] = sim.7.clone(); age_dur_breakdown[i][k] = sim.8.clone(); max_gen[i][k] = sim.9;
         }
     }
     
@@ -362,18 +355,19 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
         let dict = PyDict::new_bound(py);
         
         dict.set_item("fs", fs.to_object(py))?;
-        dict.set_item("r0", r0.to_object(py))?;
-        dict.set_item("r02", r02.to_object(py))?;
-        dict.set_item("r03", r03.to_object(py))?;
-        dict.set_item("r04", r04.to_object(py))?;
-        dict.set_item("r05", r05.to_object(py))?;
-        dict.set_item("r06", r06.to_object(py))?;
-        dict.set_item("r07", r07.to_object(py))?;
-        dict.set_item("r08", r08.to_object(py))?;
+        dict.set_item("I1", I1.to_object(py))?;
+        dict.set_item("I2", I2.to_object(py))?;
+        dict.set_item("I3", I3.to_object(py))?;
+        dict.set_item("I4", I4.to_object(py))?;
+        dict.set_item("peak_heights", peak_heights.to_object(py))?;
+        dict.set_item("peak_times", peak_times.to_object(py))?;
+        dict.set_item("initial_infected", initial_infected.to_object(py))?;
+        dict.set_item("max_gen", max_gen.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;
         dict.set_item("age_dur_sc", age_dur_breakdown.to_object(py))?;
         dict.set_item("avg_d_network", avg_d.to_object(py))?;
         dict.set_item("max_gen", max_gen.to_object(py))?;
+        dict.set_item("largest_connected_component", network_structure::largest_cc(network.adjacency_matrix.clone()).to_object(py))?;
     
         // Convert dict to PyObject and return
         Ok(dict.into())

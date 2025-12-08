@@ -1,7 +1,5 @@
-use core::num;
-
+use std::collections::{HashMap, HashSet, VecDeque};
 use rand::Rng;
-use rand::rngs;
 use rand::rngs::ThreadRng;
 use crate::distributions::*;
 // use crate::read_in::read_rates_mat;
@@ -558,4 +556,57 @@ fn stochastic_round(x: f64, rng: &mut ThreadRng) -> usize {
     else {
         int_part
     }
+}
+
+pub fn largest_cc(edges: Vec<Vec<(usize, usize)>>) -> usize {
+    // Build adjacency list
+    let mut graph: HashMap<usize, Vec<usize>> = HashMap::new();
+    for (u, row) in edges.iter().enumerate() {
+        for (_,v) in row.iter() {
+            if u < *v {
+                graph.entry(u).or_default().push(*v);
+                graph.entry(*v).or_default().push(u);
+            }
+        }
+    }
+
+    let mut visited = HashSet::new();
+    let mut max_size = 0;
+
+    // BFS/DFS from each unvisited node
+    for &node in graph.keys() {
+        if !visited.contains(&node) {
+            let size = bfs_component_size(node, &graph, &mut visited);
+            max_size = max_size.max(size);
+        }
+    }
+
+    max_size
+}
+
+/// Helper: BFS to compute component size
+fn bfs_component_size(
+    start: usize,
+    graph: &HashMap<usize, Vec<usize>>,
+    visited: &mut HashSet<usize>,
+) -> usize {
+    let mut queue = VecDeque::new();
+    queue.push_back(start);
+    visited.insert(start);
+
+    let mut count = 1;
+
+    while let Some(node) = queue.pop_front() {
+        if let Some(neighbors) = graph.get(&node) {
+            for &nbr in neighbors {
+                if !visited.contains(&nbr) {
+                    visited.insert(nbr);
+                    queue.push_back(nbr);
+                    count += 1;
+                }
+            }
+        }
+    }
+
+    count
 }
