@@ -29,5 +29,5 @@ for i, data in enumerate(datas):
 
     for k in range(num_networks):
         res = nd_p.sbm_gillesp(contact_matrix=cm, partitions=partitions, taus=taus2, iterations=48, num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k}_sbm_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+20}_sbm_fin.json','w') as f:
             json.dump(res, f)
