@@ -4,10 +4,10 @@ import json
 import sklearn.mixture
 import math
 
-n = 100_000
+n = 10_000
 num_networks= 1
 
-taus = np.arange(1.05,5.05,0.05)
+taus = np.array([0.0002])
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -16,8 +16,7 @@ per_partition = [a if i == 0 else a-partitions[i-1] for i, a in enumerate(partit
 
 bucket_labels = ['0-4', '5-11', '12-17', '18-29', '30-39', '40-49', '50-59', '60-69', '70+']
 duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
-datas = ['comix3','comixa','comixb','comixc','poly']
-
+datas = ['comix3']
 
 for i, data in enumerate(datas):
     with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_smalldur.json', 'r') as f:
@@ -43,18 +42,5 @@ for i, data in enumerate(datas):
             for sample in samples_tmp:
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist())
-    for index, beta in enumerate(res['taus']):
-        try:
-            r0 = np.mean([a for a in res['r0'][index] if a>0])
-        except:
-            r0 = 0
-        try:
-            r02 = np.mean([a for a in res['r02'][index] if a>0])
-        except:
-            r02 = 0
-        try:
-            r03 = np.mean([a for a in res['r03'][index] if a>0])
-        except:
-            r03 = 0
-        print(f'{data} {beta}: r0s = {np.round(r0,3)}, {np.round(r02,3)}, {np.round(r03,3)}')    
+        res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(),num_infec=1)
+print(res)

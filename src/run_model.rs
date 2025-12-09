@@ -184,7 +184,6 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
     -> (f64, f64, f64, f64, f64, usize, f64, Vec<Vec<Vec<usize>>>, Vec<Vec<Vec<usize>>>, usize) {
 
-    let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
     // network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
     let mut probabilities: Vec<f64> = network_structure.degrees
@@ -203,25 +202,29 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
         probabilities[i] = 0.;
     }
 
-    // infect selected individuals
-    for &i in selected.iter() {
-        network_properties.nodal_states[i] = State::Infected;
-        network_properties.generation[i] = 1;
-    }
-    let mut seir: Vec<Vec<usize>> = Vec::new();
-    let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
-    let (mut peak_height, mut time_to_peak) = (0, 0.);
     
-    let mut r_cur: Vec<usize> = Vec::new();
-    let mut e_cur: Vec<usize> = Vec::new();
+    let mut age_dur_sc: Vec<Vec<Vec<usize>>>;
+    let (mut peak_height, mut time_to_peak);
+    
+    let mut r_cur: Vec<usize>;
+    let mut e_cur: Vec<usize>;
     let mut attempts = 0;
     loop {
+        // infect selected individuals
+        for &i in selected.iter() {
+            network_properties.nodal_states[i] = State::Infected;
+            network_properties.generation[i] = 1;
+        }
         let mut i_cur: Vec<usize> = network_properties.nodal_states
             .iter()
             .enumerate()
             .filter(|(_,&state)| state == State::Infected)
             .map(|(i,_)| i)
             .collect();
+
+        // reset properties
+        age_dur_sc = vec![vec![vec![0; num_dur]; network_structure.partitions.len()]; network_structure.partitions.len()];
+        (peak_height, time_to_peak) = (0, 0.);
         r_cur = Vec::new();
         e_cur = Vec::new();
         let mut t = 0.;
@@ -316,7 +319,6 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
         }
         attempts += 1;
     }
-
     let I1: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let I2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let I3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
@@ -348,25 +350,28 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
         probabilities[i] = 0.;
     }
 
-    // infect selected individuals
-    for &i in selected.iter() {
-        network_properties.nodal_states[i] = State::Infected;
-        network_properties.generation[i] = 1;
-    }
 
-    let mut seir: Vec<Vec<usize>> = Vec::new();
-    let mut age_sc: Vec<Vec<usize>> = vec![vec![0; network_structure.partitions.len()]; network_structure.partitions.len()];
-    let (mut peak_height, mut time_to_peak) = (0, 0.);
-    let mut r_cur: Vec<usize> = Vec::new();
-    let mut e_cur: Vec<usize> = Vec::new();
+
+    let mut age_sc: Vec<Vec<usize>>;
+    let (mut peak_height, mut time_to_peak);
+    let mut r_cur: Vec<usize>;
+    let mut e_cur: Vec<usize>;
     let mut attempts = 0;
     loop {
+        for &i in selected.iter() {
+            network_properties.nodal_states[i] = State::Infected;
+            network_properties.generation[i] = 1;
+        }
         let mut i_cur: Vec<usize> = network_properties.nodal_states
             .iter()
             .enumerate()
             .filter(|(_,&state)| state == State::Infected)
             .map(|(i,_)| i)
             .collect();
+            // infect selected individuals
+        
+        age_sc = vec![vec![0; network_structure.partitions.len()]; network_structure.partitions.len()];
+        (peak_height, time_to_peak) = (0, 0.);
         r_cur = Vec::new();
         e_cur = Vec::new();
         let mut t = 0.;
@@ -374,7 +379,6 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
         let sigma = network_properties.parameters[1];
         let gamma = network_properties.parameters[2];
 
-    
         while i_cur.len() + e_cur.len() > 0 {
 
             let mut rate_pp = Vec::new();
