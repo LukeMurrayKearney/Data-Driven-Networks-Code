@@ -10,7 +10,7 @@ import math
 n = 100_000
 num_networks= 20
 
-taus1 = np.arange(.01, .5, .02)
+taus1 = np.arange(.01, .51, .02)
 taus2 = np.arange(.5, 2, .1)
 taus3 = np.arange(2, 10, .5)
 taus = np.concatenate((taus1, taus2, taus3))
@@ -51,5 +51,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(),num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+20}_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}_fin.json','w') as f:
             json.dump(res, f)

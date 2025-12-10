@@ -141,10 +141,10 @@ fn small_gillespie_dur(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitio
 #[pyfunction]
 fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
-    let mut I1 = vec![vec![0.; iterations];taus.len()];
-    let mut I2 = vec![vec![0.; iterations];taus.len()];
-    let mut I3 = vec![vec![0.; iterations];taus.len()];
-    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut I1 = vec![vec![0; iterations];taus.len()];
+    let mut I2 = vec![vec![0; iterations];taus.len()];
+    let mut I3 = vec![vec![0; iterations];taus.len()];
+    let mut I4 = vec![vec![0; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()];
     let mut peak_heights = vec![vec![0; iterations];taus.len()];
     let mut peak_times = vec![vec![0.; iterations];taus.len()];
@@ -167,7 +167,7 @@ fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations
         
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
-        let results: Vec<(f64,f64,f64,f64,f64,usize,f64,Vec<Vec<Vec<usize>>>,Vec<Vec<Vec<usize>>>,usize)>
+        let results: Vec<(f64, usize, usize, usize, usize, usize, f64, Vec<Vec<Vec<usize>>>,Vec<Vec<Vec<usize>>>,usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -260,10 +260,10 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
 #[pyfunction]
 fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
     
-    let mut I1 = vec![vec![0.; iterations];taus.len()];
-    let mut I2 = vec![vec![0.; iterations];taus.len()];
-    let mut I3 = vec![vec![0.; iterations];taus.len()];
-    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut I1 = vec![vec![0; iterations];taus.len()];
+    let mut I2 = vec![vec![0; iterations];taus.len()];
+    let mut I3 = vec![vec![0; iterations];taus.len()];
+    let mut I4 = vec![vec![0; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()];
     let mut peak_heights = vec![vec![0; iterations];taus.len()];
     let mut peak_times = vec![vec![0.; iterations];taus.len()];
@@ -279,7 +279,7 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
         cur_params[0] = tau;
         let properties = network_properties::NetworkProperties::new(&network, &cur_params);
 
-        let results: Vec<(f64,f64,f64,f64,f64,usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
+        let results: Vec<(f64, usize, usize, usize, usize, usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -318,10 +318,10 @@ fn gillespie_gmm(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iteratio
 #[pyfunction]
 fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
     
-    let mut I1 = vec![vec![0.; iterations];taus.len()];
-    let mut I2 = vec![vec![0.; iterations];taus.len()];
-    let mut I3 = vec![vec![0.; iterations];taus.len()];
-    let mut I4 = vec![vec![0.; iterations];taus.len()];
+    let mut I1 = vec![vec![0; iterations];taus.len()];
+    let mut I2 = vec![vec![0; iterations];taus.len()];
+    let mut I3 = vec![vec![0; iterations];taus.len()];
+    let mut I4 = vec![vec![0; iterations];taus.len()];
     let mut fs = vec![vec![0.; iterations];taus.len()];
     let mut peak_heights = vec![vec![0; iterations];taus.len()];
     let mut peak_times = vec![vec![0.; iterations];taus.len()];
@@ -337,7 +337,7 @@ fn gillespie_sbm(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usiz
         cur_params[0] = tau;
         let properties = network_properties::NetworkProperties::new(&network, &cur_params);
 
-        let results: Vec<(f64,f64,f64,f64,f64,usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
+        let results: Vec<(f64,usize,usize,usize,usize,usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {

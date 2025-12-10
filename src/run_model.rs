@@ -182,7 +182,7 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
 }
 
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
-    -> (f64, f64, f64, f64, f64, usize, f64, Vec<Vec<Vec<usize>>>, Vec<Vec<Vec<usize>>>, usize) {
+    -> (f64, usize, usize, usize, usize, usize, f64, Vec<Vec<Vec<usize>>>, Vec<Vec<Vec<usize>>>, usize) {
 
     let mut rng = rand::thread_rng();
     // network_properties.initialize_infection_gillespie(network_structure, initially_infected, num_dur);
@@ -319,16 +319,16 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
         }
         attempts += 1;
     }
-    let I1: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I1: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] ==1).map(|&x| x).collect::<Vec<usize>>().len();
+    let I2: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| x).collect::<Vec<usize>>().len();
+    let I3: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| x).collect::<Vec<usize>>().len();
+    let I4: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| x).collect::<Vec<usize>>().len();
 
     ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-    (I1.iter().sum::<usize>() as f64)/(I1.len() as f64),
-    if I2.len() > 0 {(I2.iter().sum::<usize>() as f64)/(I2.len() as f64)} else {0.},
-    if I3.len() > 0 {(I3.iter().sum::<usize>() as f64)/(I3.len() as f64)} else {0.},
-    if I4.len() > 0 {(I4.iter().sum::<usize>() as f64)/(I4.len() as f64)} else {0.},
+    I1,
+    I2,
+    I3,
+    I4,
     peak_height,
     time_to_peak,
     selected.iter().map(|&i| network_structure.frequency_distribution[i].clone()).collect(),
@@ -337,7 +337,7 @@ pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_propert
 }
 
 pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize)
-    -> (f64, f64, f64, f64, f64, usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize) {
+    -> (f64, usize, usize, usize, usize, usize, f64, Vec<Vec<usize>>, Vec<Vec<usize>>, usize) {
 
     let n = network_structure.partitions.last().unwrap().to_owned();
     let mut rng = rand::thread_rng();
@@ -466,16 +466,16 @@ pub fn gillesp(network_structure: &NetworkStructure, network_properties: &mut Ne
         attempts += 1;
     }
 
-    let I1: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    let I4: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| network_properties.secondary_cases[x as usize]).collect();
+    let I1: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| x).collect::<Vec<usize>>().len();
+    let I2: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| x).collect::<Vec<usize>>().len();
+    let I3: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| x).collect::<Vec<usize>>().len();
+    let I4: usize = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 4).map(|&x| x).collect::<Vec<usize>>().len();
 
     ((r_cur.len() as f64)/(network_structure.ages.len() as f64),
-    (I1.iter().sum::<usize>() as f64)/(I1.len() as f64),
-    if I2.len() > 0 {(I2.iter().sum::<usize>() as f64)/(I2.len() as f64)} else {0.},
-    if I3.len() > 0 {(I3.iter().sum::<usize>() as f64)/(I3.len() as f64)} else {0.},
-    if I4.len() > 0 {(I4.iter().sum::<usize>() as f64)/(I4.len() as f64)} else {0.},
+    I1,
+    I2,
+    I3,
+    I4,
     peak_height,
     time_to_peak,
     selected.iter().map(|&i| network_structure.frequency_distribution[i].clone()).collect(),
