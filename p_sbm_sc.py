@@ -11,7 +11,7 @@ n = 100_000
 num_networks= 40
 
 # find optimal taus for R0 = 1.5
-taus2 = np.array([.03])
+taus2 = np.array([0.03188557862807241, 0.056096604975599346, 0.08704016728959393])
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -33,6 +33,6 @@ for i, data in enumerate(datas):
 
     for k in range(num_networks):
         res = nd_p.sbm_gillesp_sc(contact_matrix=cm, partitions=partitions, taus=taus2, iterations=48, num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k+40}_sbm_sc.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}_sbm_sc_fin.json','w') as f:
             json.dump(res, f)
 

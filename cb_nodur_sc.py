@@ -11,7 +11,7 @@ n = 100_000
 num_networks= 40
 
 # find optimal taus for R0 = 1.5
-taus1 = np.array([.00325])
+taus1 = np.array([0.011292169503720528, 0.019404961877248234, 0.029076393790768314])
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -48,5 +48,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_gillesp_sc(samples,partitions=partitions,taus=taus1, iterations=96, num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k+40}_nodur_sc.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}_nodur_sc_fin.json','w') as f:
             json.dump(res, f)
