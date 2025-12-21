@@ -51,5 +51,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(), num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+180}_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+200}_fin.json','w') as f:
             json.dump(res, f)
