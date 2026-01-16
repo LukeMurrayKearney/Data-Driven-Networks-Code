@@ -8,12 +8,13 @@ import sklearn.mixture
 import math
 
 n = 100_000
-num_networks= 20
+num_networks= 40
 
-taus1 = np.arange(.005,0.15,0.01)
-taus2 = np.arange(.15, 1.5, .1)
-taus3 = np.arange(1.5, 10, 1)
-taus = np.concatenate((taus1, taus2, taus3))
+# taus1 = np.arange(.005,0.15,0.01)
+# taus2 = np.arange(.15, 1.5, .1)
+# taus3 = np.arange(1.5, 10, 1)
+# taus = np.concatenate((taus1, taus2, taus3))
+taus = np.arange(0.15, 1.0, 0.01)
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -35,5 +36,5 @@ for i, data in enumerate(datas):
 
     for k in range(num_networks):
         res = nd_p.sbm_gillesp(contact_matrix=cm, partitions=partitions, taus=taus, iterations=48, num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+140}_sbm_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+160}_sbm_fin.json','w') as f:
             json.dump(res, f)
