@@ -11,7 +11,7 @@ num_networks= 40
 # taus1 = np.arange(.005, .05, .002)
 # taus3 = np.arange(.05, .6, .1)
 # taus = np.concatenate((taus2, taus1, taus3))
-taus = np.arange(0.05,1.2,.005)
+taus = np.arange(0.05,0.12,.005)
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
