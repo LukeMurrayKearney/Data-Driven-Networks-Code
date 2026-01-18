@@ -8,14 +8,14 @@ import sklearn.mixture
 import math
 
 n = 100_000
-num_networks= 20
+num_networks= 40
 
-taus1 = np.arange(.02, .55, .02)
-taus2 = np.arange(.55, 2.25, .1)
-taus3 = np.arange(2.25, 12.5, .5)
-taus4 = np.arange(12.5, 35.5, 1)
-taus = np.concatenate((taus1, taus2, taus3, taus4))
-
+# taus1 = np.arange(.02, .55, .02)
+# taus2 = np.arange(.55, 2.25, .1)
+# taus3 = np.arange(2.25, 12.5, .5)
+# taus4 = np.arange(12.5, 35.5, 1)
+# taus = np.concatenate((taus1, taus2, taus3, taus4))
+taus = np.arange(1.3, 30, 0.33)
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -52,5 +52,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(),num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+140}_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+160}_fin.json','w') as f:
             json.dump(res, f)
