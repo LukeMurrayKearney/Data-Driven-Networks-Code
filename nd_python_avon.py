@@ -40,6 +40,11 @@ def sbm_gillesp_sc(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterat
     outbreak_params = [0, sigma, gamma]
     return nd_r.gillesp_sbm_sc(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec)
 
+def sbm_gillesp_gr(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillesp_sbm_gr(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec)
+
 def gmm_dur_gillesp(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, props=[]):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0, sigma, gamma]
@@ -49,6 +54,11 @@ def gmm_dur_gillesp_sc(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,
     partitions = [int(a) for a in partitions]
     outbreak_params = [0, sigma, gamma]
     return nd_r.gillesp_dur_sc(degree_dist, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
+
+def gmm_dur_gillesp_gr(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, props=[]):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillesp_dur_gr(degree_dist, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
 
 def gmm_dur_network(degree_dist, partitions, num_dur=5, props=[]):
     partitions = [int(a) for a in partitions]

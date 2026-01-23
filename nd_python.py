@@ -66,6 +66,14 @@ def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom
         network = nd_r.network_from_vars(n, partitions, dist_type, params, contact_matrix)
     return network
 
+def build_ER_network(partitions, mean_degree):
+    partitions = [int(a) for a in partitions]
+    return nd_r.build_ER(partitions, mean_degree)
+
+def build_DCSBM_network(partitions, degree_correction, contact_matrix):
+    partitions = [int(a) for a in partitions]
+    return nd_r.build_DCSBM(partitions, degree_correction, contact_matrix)
+
 def to_networkx(network={}):
     G = nx.Graph()
     G.add_nodes_from(range(len(network['ages'])))

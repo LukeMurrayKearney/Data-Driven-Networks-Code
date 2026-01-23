@@ -62,6 +62,54 @@ impl NetworkStructureDuration {
         self.adjacency_matrix = new_adj_matrix;
     }
 
+    pub fn new_sbm_dur(n: usize, partitions: &Vec<usize>, contact_matrix: &Vec<Vec<f64>>, num_durs: usize) -> NetworkStructure {
+        
+        // transform contact matrix to a matrix of probabilities
+        let prob_mat: Vec<Vec<f64>> = rates_to_probabilities_dur(contact_matrix.clone(), partitions, num_durs);
+        let mut rng: ThreadRng = rand::thread_rng();
+        let mut edge_list: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
+        let mut degrees: Vec<usize> = vec![0; n];
+        for i in 0..n {
+            for j in 0..i {
+                // find which block we are in
+                let part_i = partitions
+                    .iter()
+                    .position(|&x| (i/x) < 1)
+                    .unwrap();
+                let part_j = partitions
+                    .iter()
+                    .position(|&x| (j/x) < 1)
+                    .unwrap();
+                // randomly generate edges with probability prob_mat
+                if rng.gen::<f64>() < prob_mat[part_i][part_j] {
+                    edge_list[i].push((i, j));
+                    edge_list[j].push((j, i));
+                    degrees[i] += 1;
+                    degrees[j] += 1;
+                }
+            }
+        }
+        let mut last_idx = 0;
+        let ages: Vec<usize> = partitions  
+            .iter()
+            .enumerate()
+            .flat_map(|(i,x)| {
+                let answer = vec![i; *x - last_idx];
+                last_idx = *x;
+                answer
+            })
+            .collect();
+        let frequency_distribution: Vec<Vec<usize>> = create_frequency_distribution(&edge_list, &ages);
+
+        NetworkStructure {
+            adjacency_matrix: edge_list,
+            degrees: degrees,
+            ages: ages,
+            frequency_distribution: frequency_distribution,
+            partitions: partitions.clone(),
+        }
+    }
+
     
     pub fn new_from_dur_dist(partitions: &Vec<usize>, degree_age_breakdown: &Vec<Vec<usize>>, num_durs: usize) -> NetworkStructureDuration {
 
@@ -145,6 +193,95 @@ impl NetworkStructureDuration {
 }
 
 impl NetworkStructure {
+
+    pub fn new_dcsbm(partitions: &Vec<usize>, degree_correction: &Vec<f64>, contact_matrix: &Vec<Vec<f64>>) -> NetworkStructure {
+        
+        // transform contact matrix to a matrix of probabilities
+        let n = *partitions.last().unwrap();
+        let prob_mat: Vec<Vec<f64>> = rates_to_probabilities(contact_matrix.clone(), partitions);
+        let mut rng: ThreadRng = rand::thread_rng();
+        let mut edge_list: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
+        let mut degrees: Vec<usize> = vec![0; n];
+        for i in 0..n {
+            for j in 0..i {
+                // find which block we are in
+                let part_i = partitions
+                    .iter()
+                    .position(|&x| (i < x))
+                    .unwrap();
+                let part_j = partitions
+                    .iter()
+                    .position(|&x| (j < x))
+                    .unwrap();
+                // randomly generate edges with probability prob_mat
+                if rng.gen::<f64>() < prob_mat[part_i][part_j]*degree_correction[i]*degree_correction[j] {
+                    edge_list[i].push((i, j));
+                    edge_list[j].push((j, i));
+                    degrees[i] += 1;
+                    degrees[j] += 1;
+                }
+            }
+        }
+        let mut last_idx = 0;
+        let ages: Vec<usize> = partitions  
+            .iter()
+            .enumerate()
+            .flat_map(|(i,x)| {
+                let answer = vec![i; *x - last_idx];
+                last_idx = *x;
+                answer
+            })
+            .collect();
+        let frequency_distribution: Vec<Vec<usize>> = create_frequency_distribution(&edge_list, &ages);
+
+        NetworkStructure {
+            adjacency_matrix: edge_list,
+            degrees: degrees,
+            ages: ages,
+            frequency_distribution: frequency_distribution,
+            partitions: partitions.clone(),
+        }
+    }
+
+    pub fn new_er(partitions: &Vec<usize>, mean_degree: f64) -> NetworkStructure {
+
+        let n = *partitions.last().unwrap();
+        let mut rng: ThreadRng = rand::thread_rng();
+        let mut edge_list: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
+        let mut degrees = vec![0;n];
+        for i in 0..n {
+            for j in 0..i {
+                let prob = mean_degree / (n as f64);
+                // randomly generate edges with probability prob_mat
+                if rng.gen::<f64>() < prob {
+                    edge_list[i].push((i, j));
+                    edge_list[j].push((j, i));
+                    degrees[i] += 1;
+                    degrees[j] += 1;
+                }
+            }
+        }
+        // define age brackets
+        let mut last_idx = 0;
+        let ages: Vec<usize> = partitions  
+            .iter()
+            .enumerate()
+            .flat_map(|(i,x)| {
+                let answer = vec![i; *x - last_idx];
+                last_idx = *x;
+                answer
+            })
+            .collect();
+        let frequency_distribution: Vec<Vec<usize>> = create_frequency_distribution(&edge_list, &ages);
+
+        NetworkStructure {
+            adjacency_matrix: edge_list,
+            degrees: degrees,
+            ages: ages,
+            frequency_distribution: frequency_distribution,
+            partitions: partitions.clone(),
+        }
+    }
 
     pub fn new_from_degree_dist(partitions: &Vec<usize>, degree_age_breakdown: &Vec<Vec<usize>>) -> NetworkStructure {
 

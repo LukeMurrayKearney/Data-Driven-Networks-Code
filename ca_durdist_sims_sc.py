@@ -8,7 +8,7 @@ import sklearn.mixture
 import math
 
 n = 100_000
-num_networks= 40
+num_networks= 50
 
 ## sc plots
 # taus = np.array([0.4601723132599503, 7.024020313629644])
@@ -49,6 +49,6 @@ for i, data in enumerate(datas):
             for sample in samples_tmp:
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur_gillesp_sc(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(), num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k+80}_r0_comparison.json','w') as f:
+        res = nd_p.gmm_dur_gillesp_gr(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(), num_infec=5)
+        with open(f'duration+ages/seir_sims/{data}_{k}_gr.json','w') as f:
             json.dump(res, f)

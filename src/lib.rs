@@ -3,7 +3,7 @@ use std::os::linux::net;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use rayon::{iter, prelude::*};
+use rayon::{iter, prelude::*, vec};
 use crate::dpln::{pdf, sample};
 use crate::network_structure::NetworkStructure;
 
@@ -81,6 +81,42 @@ fn network_from_vars(n: usize, partitions: Vec<usize>, dist_type: &str, network_
 fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>) -> PyResult<Py<PyDict>>  {
     
     let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_sbm_from_vars(n, &partitions, &contact_matrix);
+    
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+
+        Ok(dict.into())
+    })
+}
+
+// Creates an ER network
+#[pyfunction]
+fn build_ER(partitions: Vec<usize>, mean_degree: f64) -> PyResult<Py<PyDict>>  {
+    
+    let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_er(&partitions, mean_degree);
+    
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+
+        Ok(dict.into())
+    })
+}
+
+// Creates an DCSBM network
+#[pyfunction]
+fn build_DCSBM(partitions: Vec<usize>, degree_correction: Vec<f64>, contact_matrix: Vec<Vec<f64>>) -> PyResult<Py<PyDict>>  {
+    
+    let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_dcsbm(&partitions, &degree_correction, &contact_matrix);
     
     Python::with_gil(|py| {
         let dict = PyDict::new_bound(py);
@@ -252,6 +288,53 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
         dict.set_item("sc", r0.to_object(py))?;
         dict.set_item("sc2", r02.to_object(py))?;
         dict.set_item("sc3", r03.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;    
+        Ok(dict.into())
+    })
+}
+
+
+#[pyfunction]
+fn gillesp_dur_gr(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
+    
+    let mut r02 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut gr = vec![vec![0.; iterations]; taus.len()];
+    let mut tmp_num_dur = num_dur;
+
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+        tmp_num_dur = 5;
+    }
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        
+        let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        let results: Vec<(Vec<usize>, f64)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::dur_gillesp_gr(&network, &mut properties.clone(), num_infec, tmp_num_dur)
+                })
+                .collect();
+        for (k, sim) in results.iter().enumerate() {
+            for val in sim.0.iter() {
+                r02[i][k].push(*val);
+            }
+            gr[i][k] = sim.1;
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("sc2", r02.to_object(py))?;
+        dict.set_item("growth_rate", gr.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;    
         Ok(dict.into())
     })
@@ -465,6 +548,48 @@ fn gillesp_sbm_sc(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usi
         dict.set_item("sc", r0.to_object(py))?;
         dict.set_item("sc2", r02.to_object(py))?;
         dict.set_item("sc3", r03.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;    
+        Ok(dict.into())
+    })
+}
+
+
+#[pyfunction]
+fn gillesp_sbm_gr(contact_matrix: Vec<Vec<f64>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
+    
+    let mut r02 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut gr = vec![vec![0.; iterations]; taus.len()];
+
+    for (i, &tau) in taus.iter().enumerate() {
+        println!("{i}");
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        let network: network_structure::NetworkStructure = network_structure::NetworkStructure::new_sbm_from_vars(partitions.last().unwrap().to_owned(), &partitions, &contact_matrix);
+
+        let properties = network_properties::NetworkProperties::new(&network, &cur_params);
+
+        let results: Vec<(Vec<usize>, f64)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::gillesp_gr(&network, &mut properties.clone(), num_infec)
+                })
+                .collect();
+        for (k, sim) in results.iter().enumerate() {
+            for val in sim.0.iter() {
+                r02[i][k].push(*val);
+            }
+            gr[i][k] = sim.1;
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("sc2", r02.to_object(py))?;
+        dict.set_item("gr", gr.to_object(py))?;
         dict.set_item("taus", taus.to_object(py))?;    
         Ok(dict.into())
     })
@@ -1073,6 +1198,8 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(network_from_source_and_targets, m)?)?;
     m.add_function(wrap_pyfunction!(network_from_vars, m)?)?;
     m.add_function(wrap_pyfunction!(sbm_from_vars, m)?)?;
+    m.add_function(wrap_pyfunction!(build_ER, m)?)?;
+    m.add_function(wrap_pyfunction!(build_DCSBM, m)?)?;
     m.add_function(wrap_pyfunction!(dpln_pdf, m)?)?;
     m.add_function(wrap_pyfunction!(dpln_sample, m)?)?;
     m.add_function(wrap_pyfunction!(fit_dpln, m)?)?;
@@ -1081,6 +1208,8 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_r0, m)?)?;
     m.add_function(wrap_pyfunction!(get_fs, m)?)?;
     m.add_function(wrap_pyfunction!(sellke_dur, m)?)?;
+    m.add_function(wrap_pyfunction!(gillesp_dur_gr, m)?)?;
+    m.add_function(wrap_pyfunction!(gillesp_sbm_gr, m)?)?;
     m.add_function(wrap_pyfunction!(gillesp_dur, m)?)?;
     m.add_function(wrap_pyfunction!(gillespie_sbm, m)?)?;
     m.add_function(wrap_pyfunction!(gillespie_gmm, m)?)?;
