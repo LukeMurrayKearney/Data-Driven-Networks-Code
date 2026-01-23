@@ -15,15 +15,11 @@ def main():
     # data = sys.argv[1]
     # model = sys.argv[2]
 
-    datas = ['comixa','comixb','comixc', 'comix3', 'poly']
-    models = ['sbm', 'gmm', 'dpln']
+    datas = ['comixa','comixb', 'comix3', 'poly']
+    models = ['sbm', 'gmm']
     
     for data in datas:
         for model in models:
-            if data in ['comixa','comixb']:
-                continue
-            if data == 'comixc' and model in ['gmm','sbm']: 
-                continue
             
             n, iters = 100_000, 30
 
