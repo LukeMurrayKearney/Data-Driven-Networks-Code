@@ -1,3 +1,6 @@
+# import sys
+# import os
+# sys.path.append(os.path.abspath('..'))
 import nd_python_avon as nd_p 
 import numpy as np
 import json
@@ -5,116 +8,48 @@ import sklearn.mixture
 import math
 import matplotlib.pyplot as plt
 
-n = 10_000
-num_networks= 1
+n = 20_000
+num_networks= 5
 
-taus = [100]
+taus = [np.linspace(0.1,1,10) for _ in range(4)]
 
-buckets = np.array([])
-partitions = [n]
-
-per_partition = [a if i == 0 else a-partitions[i-1] for i, a in enumerate(partitions)]
-
-bucket_labels = ['0-4', '5-11', '12-17', '18-29', '30-39', '40-49', '50-59', '60-69', '70+']
-duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
-datas = ['comixa']
-
-
-for i, data in enumerate(datas):
-    with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_dur_noage.json', 'r') as f:
-        optimal_num_components = json.load(f)
-    ##################### read fits ####################################
-    with open(f'input_data/egos/{data}_dur_noage.json', 'r') as f:
-        egos = json.load(f)
-    props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
-
-    for k in range(num_networks):
-        samples_for_plot = []
-        classifier = []
-        samples = []
-        for l, _ in enumerate(partitions):
-            samples_for_plot.append([])
-            classifier.append(sklearn.mixture.GaussianMixture(n_components=optimal_num_components[data][l], covariance_type='full'))
-            egos_age = [a for a in egos if a['age'] == l]
-            ## use log(k+1) instead of k to fit
-            X = [[math.log(b+1) for b in a['contacts']] for a in egos_age]
-            classifier[l].fit(X)
-            ## sample same number of people as the data
-            samples_tmp,_ = classifier[l].sample(per_partition[l])
-            for sample in samples_tmp:
-                samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-                samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(), num_infec=1)
-        # print(res)
-        print('noage')
-        print(np.unique(np.sum(samples,axis=1), return_counts=True))
-        print(np.sum(samples,axis=0))
-        print(np.sum([a['contacts'] for a in egos],axis=0))
-        
-        # print(np.sum(np.sum(res['age_dur_sc'][0][0], axis=0), axis=0))
-        print('\n\n')
-    
-        # y,x = np.histogram(samples, bins=list(range(1,np.max(samples)+1)))
-        # plt.scatter(x[1:], y)
-        # plt.yscale('log')
-        # plt.xscale('log')
-        # plt.title('noage')
-        # plt.show()
-        
-        
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
+
 per_partition = [a if i == 0 else a-partitions[i-1] for i, a in enumerate(partitions)]
 
 bucket_labels = ['0-4', '5-11', '12-17', '18-29', '30-39', '40-49', '50-59', '60-69', '70+']
 duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
+datas = ['comix3', 'comixa', 'comixb', 'poly']
 
+
+def make_contact_matrices(egos, num_durs):
+    num_per_bucket = np.zeros(np.max([a['age'] for a in egos])+1)
+    contact_matrix = [np.zeros((np.max([a['age'] for a in egos])+1, np.max([a['age'] for a in egos])+1)) for _ in range(num_durs)]
+    for ego in egos:
+        num_per_bucket[ego['age']] += 1
+        for j, val in enumerate(ego['contacts']):
+            contact_matrix[j%num_durs][ego['age'], j//num_durs] += val
+    for j in range(num_durs):
+        contact_matrix[j] = np.divide(contact_matrix[j].T, num_per_bucket).T
+    return contact_matrix, num_per_bucket
 
 for i, data in enumerate(datas):
     with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_smalldur.json', 'r') as f:
-            optimal_num_components = json.load(f)
+        optimal_num_components = json.load(f)
     ##################### read fits ####################################
     with open(f'input_data/egos/{data}_dur_small.json', 'r') as f:
         egos = json.load(f)
     props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
 
+    contact_matrix, num_per_bucket = make_contact_matrices(egos, num_durs=3)
     for k in range(num_networks):
-        samples_for_plot = []
-        classifier = []
-        samples = []
-        for l, _ in enumerate(partitions):
-            samples_for_plot.append([])
-            classifier.append(sklearn.mixture.GaussianMixture(n_components=optimal_num_components[data][l], covariance_type='full'))
-            egos_age = [a for a in egos if a['age'] == l]
-            ## use log(k+1) instead of k to fit
-            X = [[math.log(b+1) for b in a['contacts']] for a in egos_age]
-            classifier[l].fit(X)
-            ## sample same number of people as the data
-            samples_tmp,_ = classifier[l].sample(per_partition[l])
-            for sample in samples_tmp:
-                samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-                samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
-        res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(), num_infec=1)
-        print('age')
-        print(np.unique(np.sum(samples,axis=1), return_counts=True))
-        tmp = np.sum(samples,axis=0)
-        durs = np.zeros(3)
-        for idx, val in enumerate(tmp):
-            durs[idx%3] += val
-        print(durs)
-        tmp = np.sum([a['contacts'] for a in egos],axis=0)
-        durs = np.zeros(3)
-        for idx, val in enumerate(tmp):
-            durs[idx%3] += val
-        print(durs)
-        
-        # print(np.sum(np.sum(res['age_dur_sc'][0][0], axis=0), axis=0))
-        print('\n\n')
-        y,x = np.histogram(samples, bins=list(range(1,np.max(samples)+1)))
 
-        # plt.scatter(x[1:], y)
-        # plt.yscale('log')
-        # plt.xscale('log')
-        # plt.title('age')
-        # plt.show()
-
+        res = nd_p.sbm_gillesp_dur(contact_matrix=contact_matrix, num_dur=3, partitions=partitions, taus=taus[i], iterations=10, props=props.tolist(), num_infec=1)
+        print(data)
+        I2, I3 = res['I2'], res['I3']
+        r0s = [0 if np.sum(I2[int(tau)])<=0 else np.sum(I3[int(tau)])/np.sum(I2[int(tau)]) for tau,_ in enumerate(taus[i])]
+        plt.scatter(taus[i], r0s)
+        plt.plot(taus[i], r0s, label=f'{k}')
+    plt.title(f'{data}')
+    plt.show()
