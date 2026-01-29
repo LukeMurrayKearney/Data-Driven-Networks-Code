@@ -94,6 +94,26 @@ fn sbm_from_vars(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<f64>>
     })
 }
 
+// Creates a SBM duration network
+#[pyfunction]
+fn sbm_duration(n: usize, partitions: Vec<usize>, contact_matrix: Vec<Vec<Vec<f64>>>, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>>  {
+    
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_sbm_dur(partitions.last().cloned().unwrap(), &partitions, &contact_matrix, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+    }
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+
+        Ok(dict.into())
+    })
+}
+
 // Creates an ER network
 #[pyfunction]
 fn build_ER(partitions: Vec<usize>, mean_degree: f64) -> PyResult<Py<PyDict>>  {
@@ -1262,6 +1282,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(network_from_source_and_targets, m)?)?;
     m.add_function(wrap_pyfunction!(network_from_vars, m)?)?;
     m.add_function(wrap_pyfunction!(sbm_from_vars, m)?)?;
+    m.add_function(wrap_pyfunction!(sbm_duration, m)?)?;
     m.add_function(wrap_pyfunction!(build_ER, m)?)?;
     m.add_function(wrap_pyfunction!(build_DCSBM, m)?)?;
     m.add_function(wrap_pyfunction!(dpln_pdf, m)?)?;

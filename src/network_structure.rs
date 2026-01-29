@@ -68,29 +68,36 @@ impl NetworkStructureDuration {
         let mut rng: ThreadRng = rand::thread_rng();
         let mut edge_list: Vec<Vec<(usize, usize, usize)>> = vec![Vec::new(); n];
         let mut degrees = vec![vec![0; num_durs];n];
-        for (duration, cm) in contact_matrix.iter().enumerate() {
-            // transform contact matrix to a matrix of probabilities
-            let mut prob_mat: Vec<Vec<f64>> = rates_to_probabilities_dur(cm.clone(), partitions, num_durs);
-            let possible_edges = (n*(n-1)/2) as f64;
-            let scale = (possible_edges + degrees.iter().map(|x| x.iter().sum::<usize>()).sum::<usize>() as f64) / possible_edges;
-            prob_mat.iter_mut().for_each(|row| row.iter_mut().for_each(|x| *x *= scale));
-            for i in 0..n {
-                for j in 0..i {
-                    // find which block we are in
-                    let part_i = partitions
-                        .iter()
-                        .position(|&x| i<x)
-                        .unwrap();
-                    let part_j = partitions
-                        .iter()
-                        .position(|&x| j<x)
-                        .unwrap();
-                    // randomly generate edges with probability prob_mat
-                    if  rng.gen::<f64>() < prob_mat[part_i][part_j] && edge_list[i].iter().all(|&(_,x,_)| x!=j) {
-                        edge_list[i].push((i, j, duration));
-                        edge_list[j].push((j, i, duration));
-                        degrees[i][duration] += 1;
-                        degrees[j][duration] += 1;
+        let prob_mat: Vec<Vec<Vec<f64>>> = contact_matrix.iter().map(|cm| rates_to_probabilities(cm.clone(), partitions)).collect();
+        for i in 0..n {
+            for j in 0..i {
+                // find which block we are in
+                let part_i = partitions
+                    .iter()
+                    .position(|&x| i<x)
+                    .unwrap();
+                let part_j = partitions
+                    .iter()
+                    .position(|&x| j<x)
+                    .unwrap();
+                // randomly generate edges with probability prob_mat
+                let total_prob: f64 = (0..num_durs)
+                    .map(|d| prob_mat[d][part_i][part_j])
+                    .sum();
+
+                if rng.gen::<f64>() < total_prob {
+                    // edge exists
+                    let u1 = rng.gen::<f64>()*total_prob;
+                    let mut cumulative_prob = 0.0;
+                    for duration in 0..num_durs {
+                        cumulative_prob += prob_mat[duration][part_i][part_j];
+                        if u1 < cumulative_prob {
+                            edge_list[i].push((i, j, duration));
+                            edge_list[j].push((j, i, duration));
+                            degrees[i][duration] += 1;
+                            degrees[j][duration] += 1;
+                            break;
+                        }
                     }
                 }
             }

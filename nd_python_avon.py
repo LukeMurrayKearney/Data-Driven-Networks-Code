@@ -79,12 +79,14 @@ def gmm_dur(degree_dist, partitions, num_dur=5, taus=np.arange(0.1,1,0.1), itera
     outbreak_params = [0,inv_gamma]
     return nd_r.sellke_dur(degree_dist, taus, iterations, partitions, outbreak_params, prop_infec, num_dur, props)
 
-def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom", degree_dist=None):
+def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom", degree_dist=None, num_dur=3, props=[1,0,0]):
     partitions = [int(a) for a in partitions]
     if dist_type == 'sbm':
         network = nd_r.sbm_from_vars(n, partitions, contact_matrix)
     elif dist_type == 'gmm':
         network = gmm_network(degree_dist, partitions)
+    elif dist_type == 'sbm_dur':
+        network = nd_r.sbm_duration(n, partitions, contact_matrix, num_dur, props)
     else:
         if params is None:
             print("Parameters are required")
