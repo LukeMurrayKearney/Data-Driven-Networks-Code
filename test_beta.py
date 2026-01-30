@@ -8,10 +8,15 @@ import sklearn.mixture
 import math
 import matplotlib.pyplot as plt
 
-n = 10_000
-num_networks= 5
+n = 5_000
+num_networks= 3
 
 taus = [np.linspace(0.1,1,10) for _ in range(4)]
+taus = [[0.4,.425,.45,.475,.5,.525,.55,.575,.6,1.5,1.75,2,2.25,2.5,2.75,3,13,14,15,16,17,18],
+        [.45,.475,.5,.525,.55,.575,.6,.625,.65,8,9,10,11,12,13,14,15,16],
+        [.55,.575,.6,.626,.65,.675,.7,.725,.75,10,11,12,13,14,15,16,17,18],
+        [.045,.05,.055,.06,.065,.07,.075,.08,.085,.13,.14,.15,.16,.17,.23,.24,.25,.26,.27,.28,.29,.3]]
+        
 
 buckets = np.array([5,12,18,30,40,50,60,70])
 partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
@@ -46,28 +51,18 @@ for i, data in enumerate(datas):
     
     print(data)
     contact_matrix, num_per_bucket = make_contact_matrices(egos, num_durs=3)    
-    network_dur = nd_p.build_network(n=n, contact_matrix=contact_matrix, partitions=partitions, dist_type='sbm_dur', num_dur=3, props=props.tolist())
-    print(np.sum(np.mean(network_dur['degrees'], axis=0)), np.mean(network_dur['degrees'], axis=0))
-    
-    with open(f'input_data/egos/{data}.json', 'r') as f:
-        egos_noage = json.load(f)
-    cm = make_contact_matrices(egos_noage, num_durs=1)[0][0]
-    
-    # cm = np.genfromtxt(f'input_data/contact_matrices/contact_matrix_{data}.csv', delimiter=',')
-    network = nd_p.build_network(n=n, contact_matrix=cm, partitions=partitions, dist_type='sbm')
-    print(np.mean(network['degrees'], axis=0))
+    # network_dur = nd_p.build_network(n=n, contact_matrix=contact_matrix, partitions=partitions, dist_type='sbm_dur', num_dur=3, props=props.tolist())
+    # print(np.sum(np.mean(network_dur['degrees'], axis=0)), np.mean(network_dur['degrees'], axis=0))
     
     # print()
     # print(np.sum([np.tril(a, k=0) for a in contact_matrix]))
     # print(np.sum(np.tril(cm, k=0)))
     # print()
-    # for k in range(num_networks):
-
-        #   res = nd_p.sbm_gillesp_dur(contact_matrix=contact_matrix, num_dur=3, partitions=partitions, taus=taus[i], iterations=10, props=props.tolist(), num_infec=1)
-    #     print(data)
-    #     I2, I3 = res['I2'], res['I3']
-    #     r0s = [0 if np.sum(I2[int(tau)])<=0 else np.sum(I3[int(tau)])/np.sum(I2[int(tau)]) for tau,_ in enumerate(taus[i])]
-    #     plt.scatter(taus[i], r0s)
-    #     plt.plot(taus[i], r0s, label=f'{k}')
-    # plt.title(f'{data}')
-    # plt.show()
+    for k in range(num_networks):
+        res = nd_p.sbm_gillesp_dur(contact_matrix=contact_matrix, num_dur=3, partitions=partitions, taus=taus[i], iterations=15 if data=='poly' else 30, props=props.tolist(), num_infec=1)
+        I2, I3 = res['I2'], res['I3']
+        r0s = [0 if np.sum(I2[int(tau)])<=0 else np.sum(I3[int(tau)])/np.sum(I2[int(tau)]) for tau,_ in enumerate(taus[i])]
+        plt.scatter(taus[i], r0s)
+        plt.plot(taus[i], r0s, label=f'{k}')
+    plt.title(f'{data}')
+    plt.show()
