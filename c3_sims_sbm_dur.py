@@ -13,9 +13,9 @@ num_networks= 40
 # taus1 = np.arange(.39,0.75,0.025)
 # taus2 = np.arange(1.9,3.9,.2)
 # taus3 = np.arange(8.5, 12.5, 1)
-taus1 = np.arange(.1,0.75,0.025)
-taus2 = np.arange(.75,2,.1)
-taus3 = np.arange(2, 5, .5)
+taus1 = np.arange(.11,0.75,0.025)
+taus2 = np.arange(.775,2.25,.1)
+taus3 = np.arange(2.25, 5.25, .5)
 taus = np.concatenate((taus1, taus2, taus3))
 # taus = np.array([0.4,.425,.45,.475,.5,.525,.55,.575,.6,1.5,1.75,2,2.25,2.5,2.75,3,13,14,15,16,17,18])+.1
 
@@ -56,5 +56,5 @@ for i, data in enumerate(datas):
     for k in range(num_networks):
         print(f'network {k} for data {data}')
         res = nd_p.sbm_gillesp_dur(contact_matrix=contact_matrix, num_dur=3, partitions=partitions, taus=taus, iterations=48, props=props.tolist(), num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+200}_{model}_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k+240}_{model}_fin.json','w') as f:
             json.dump(res, f)
