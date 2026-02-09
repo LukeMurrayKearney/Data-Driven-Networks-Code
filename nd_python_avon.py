@@ -38,7 +38,12 @@ def sbm_gillesp(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iteration
 def sbm_gillesp_dur(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, num_dur=5, props=[]):
     partitions = [int(a) for a in partitions]
     outbreak_params = [0, sigma, gamma]
-    return nd_r.gillesp_dur_sbm(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
+    return nd_r.gillesp_dursbm_sc(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
+
+def sbm_gillesp_dur_sc(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1, num_dur=5, props=[]):
+    partitions = [int(a) for a in partitions]
+    outbreak_params = [0, sigma, gamma]
+    return nd_r.gillesp_dursbm_sc(contact_matrix, taus, iterations, partitions, outbreak_params, num_infec, num_dur, props)
 
 def sbm_gillesp_sc(contact_matrix, partitions, taus=np.arange(0.1,1,0.1), iterations=10, gamma=1/4, sigma=1, num_infec=1):
     partitions = [int(a) for a in partitions]

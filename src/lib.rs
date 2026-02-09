@@ -313,6 +313,58 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
     })
 }
 
+#[pyfunction]
+fn gillesp_sbmdur_sc(contact_matrix: Vec<Vec<Vec<f64>>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
+    
+    let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut r02 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut r03 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut tmp_num_dur = num_dur;
+
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_sbm_dur(partitions.last().cloned().unwrap(), &partitions, &contact_matrix, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+        tmp_num_dur = 5;
+    }
+    for (i, &tau) in taus.iter().enumerate() {
+        let mut cur_params = outbreak_params.clone();
+        cur_params[0] = tau;
+        
+        let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+        let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>
+            = (0..iterations)
+                .into_par_iter()
+                .map(|_| {
+                    run_model::dur_gillesp_sc(&network, &mut properties.clone(), num_infec, tmp_num_dur)
+                })
+                .collect();
+        for (k, sim) in results.iter().enumerate() {
+            for val in sim.0.iter() {
+                r0[i][k].push(*val);
+            }
+            for val in sim.1.iter() {
+                r02[i][k].push(*val);
+            }
+            for val in sim.2.iter() {
+                r03[i][k].push(*val);
+            }
+        }
+    }
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("sc", r0.to_object(py))?;
+        dict.set_item("sc2", r02.to_object(py))?;
+        dict.set_item("sc3", r03.to_object(py))?;
+        dict.set_item("taus", taus.to_object(py))?;    
+        Ok(dict.into())
+    })
+}
+
 
 #[pyfunction]
 fn gillesp_dur_gr(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
@@ -1302,6 +1354,7 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(gillesp_dur_sc, m)?)?;
     m.add_function(wrap_pyfunction!(gillesp_gmm_sc, m)?)?;
     m.add_function(wrap_pyfunction!(gillesp_sbm_sc, m)?)?;
+    m.add_function(wrap_pyfunction!(gillesp_sbmdur_sc, m)?)?;
     m.add_function(wrap_pyfunction!(small_gillespie_dur, m)?)?;
     m.add_function(wrap_pyfunction!(dur_r0, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
