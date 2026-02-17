@@ -266,6 +266,7 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
     let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut r02 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut r03 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut age_dur_sc = vec![vec![Vec::new(); iterations];taus.len()];
     let mut tmp_num_dur = num_dur;
 
     let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_from_dur_dist(&partitions, &degree_age_breakdown, num_dur);
@@ -280,7 +281,7 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
         
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
-        let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>
+        let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>, Vec<Vec<Vec<usize>>>)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -297,6 +298,7 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
             for val in sim.2.iter() {
                 r03[i][k].push(*val);
             }
+            age_dur_sc[i][k] = sim.3.clone();
         }
     }
     
@@ -308,7 +310,8 @@ fn gillesp_dur_sc(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterati
         dict.set_item("sc", r0.to_object(py))?;
         dict.set_item("sc2", r02.to_object(py))?;
         dict.set_item("sc3", r03.to_object(py))?;
-        dict.set_item("taus", taus.to_object(py))?;    
+        dict.set_item("taus", taus.to_object(py))?; 
+        dict.set_item("age_dur_sc", age_dur_sc.to_object(py))?;
         Ok(dict.into())
     })
 }
@@ -319,6 +322,8 @@ fn gillesp_sbmdur_sc(contact_matrix: Vec<Vec<Vec<f64>>>, taus: Vec<f64>, iterati
     let mut r0 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut r02 = vec![vec![Vec::new(); iterations];taus.len()]; 
     let mut r03 = vec![vec![Vec::new(); iterations];taus.len()]; 
+    let mut age_dur_sc = vec![vec![Vec::new(); iterations];taus.len()];
+
     let mut tmp_num_dur = num_dur;
 
     let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_sbm_dur(partitions.last().cloned().unwrap(), &partitions, &contact_matrix, num_dur);
@@ -332,7 +337,7 @@ fn gillesp_sbmdur_sc(contact_matrix: Vec<Vec<Vec<f64>>>, taus: Vec<f64>, iterati
         
         let properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
 
-        let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>
+        let results: Vec<(Vec<usize>, Vec<usize>, Vec<usize>, Vec<Vec<Vec<usize>>>)>
             = (0..iterations)
                 .into_par_iter()
                 .map(|_| {
@@ -349,6 +354,7 @@ fn gillesp_sbmdur_sc(contact_matrix: Vec<Vec<Vec<f64>>>, taus: Vec<f64>, iterati
             for val in sim.2.iter() {
                 r03[i][k].push(*val);
             }
+            age_dur_sc[i][k] = sim.3.clone();
         }
     }
     
@@ -360,7 +366,8 @@ fn gillesp_sbmdur_sc(contact_matrix: Vec<Vec<Vec<f64>>>, taus: Vec<f64>, iterati
         dict.set_item("sc", r0.to_object(py))?;
         dict.set_item("sc2", r02.to_object(py))?;
         dict.set_item("sc3", r03.to_object(py))?;
-        dict.set_item("taus", taus.to_object(py))?;    
+        dict.set_item("taus", taus.to_object(py))?;  
+        dict.set_item("age_dur_sc", age_dur_sc.to_object(py))?;  
         Ok(dict.into())
     })
 }

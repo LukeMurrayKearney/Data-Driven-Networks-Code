@@ -10,9 +10,10 @@ import math
 n = 100_000
 num_networks= 50
 
-taus1 = np.linspace(0.6,.8,10)
-taus2 = np.linspace(10,14,10)
-taus = np.concatenate([taus1, taus2])
+# taus1 = np.linspace(0.6,.8,10)
+# taus2 = np.linspace(10,14,10)
+# taus = np.concatenate([taus1, taus2])
+taus = np.array([0.7,12])
 
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -50,7 +51,7 @@ for i, data in enumerate(datas):
     contact_matrix, num_per_bucket = make_contact_matrices(egos, num_durs=3)
 
     for k in range(num_networks):
-        res = nd_p.sbm_gillesp_dur_sc(contact_matrix=contact_matrix, partitions=partitions, taus=taus, iterations=48, num_infec=5)
-        with open(f'duration+ages/seir_sims/{data}_{k}_sbm_dur_sc.json','w') as f:
+        res = nd_p.sbm_gillesp_dur_sc(contact_matrix=contact_matrix, partitions=partitions, taus=taus, iterations=48*2, num_infec=5)
+        with open(f'duration+ages/seir_sims/{data}_{k}_sbm_dur_age_dur.json','w') as f:
             json.dump(res, f)
 
