@@ -835,7 +835,7 @@ pub fn dur_gillesp_gr(network_structure: &NetworkStructureDuration, network_prop
 
 
 pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize)
-    -> (Vec<usize>, Vec<usize>, Vec<usize>) {
+    -> (Vec<usize>, Vec<usize>, Vec<usize>, Vec<Vec<Vec<usize>>>) {
 
     let mut rng = rand::thread_rng();
     let mut probabilities: Vec<f64> = network_structure.degrees.iter().map(|&deg| deg as f64).collect();
@@ -866,6 +866,8 @@ pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut
     let sigma = network_properties.parameters[1];
     let gamma = network_properties.parameters[2];
     let mut cur_min_gen = 0;
+    let mut age_dur_sc = vec![vec![vec![0; 1]; network_structure.partitions.len()]; network_structure.partitions.len()];
+
 
     while i_cur.len() + e_cur.len() > 0 && cur_min_gen < 4 {
 
@@ -916,6 +918,9 @@ pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut
             network_properties.secondary_cases[index_case] += 1;
             e_cur.push(new_case);
             cur_min_gen = i_cur.iter().map(|x| network_properties.generation[x.to_owned()]).min().unwrap();
+            if network_properties.generation[index_case] == 2 {
+                age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]][0] += 1;
+            }
         }
         else if u2 < p_inf + p_trans {
             // transition to infective event
@@ -944,7 +949,7 @@ pub fn gillesp_sc(network_structure: &NetworkStructure, network_properties: &mut
     let sc: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 1).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc2: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 2).map(|&x| network_properties.secondary_cases[x as usize]).collect();
     let sc3: Vec<usize> = r_cur.iter().filter(|&&x| network_properties.generation[x as usize] == 3).map(|&x| network_properties.secondary_cases[x as usize]).collect();
-    (sc, sc2, sc3)
+    (sc, sc2, sc3, age_dur_sc)
 }
 
 
