@@ -51,7 +51,7 @@ for i, data in enumerate(datas):
     contact_matrix, num_per_bucket = make_contact_matrices(egos, num_durs=3)
 
     for k in range(num_networks):
-        res = nd_p.sbm_gillesp_dur_sc(contact_matrix=contact_matrix, partitions=partitions, taus=taus, iterations=48*2, num_infec=5)
+        res = nd_p.sbm_gillesp_dur_sc(contact_matrix=contact_matrix, partitions=partitions, taus=taus, iterations=48*2, num_infec=1, props=props.tolist(), num_dur=3)
         with open(f'duration+ages/seir_sims/{data}_{k}_sbm_dur_age_dur.json','w') as f:
             json.dump(res, f)
 

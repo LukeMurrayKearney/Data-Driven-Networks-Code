@@ -195,6 +195,84 @@ fn small_gillespie_dur(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitio
 }
 
 #[pyfunction]
+fn small_sbm_dur(contact_matrix: Vec<Vec<Vec<f64>>>, tau: f64, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
+    
+    let mut tmp_num_dur = num_dur;
+    let mut cur_params = outbreak_params.clone();
+    cur_params[0] = tau;
+    let mut network: network_structure::NetworkStructureDuration = network_structure::NetworkStructureDuration::new_sbm_dur(partitions.last().unwrap().to_owned(), &partitions, &contact_matrix, num_dur);
+    if props.len() > 0 {
+        network.transform(&props);
+        tmp_num_dur = 5;
+    }
+    let mut properties = network_properties::NetworkProperties::new_dur(&network, &cur_params);
+
+    let (sir, e_events, i_events, r_events, ts) = run_model::small_dur_g(&network, &mut properties, num_infec, tmp_num_dur);
+               
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("disease_from", properties.disease_from.to_object(py))?;
+        dict.set_item("generation", properties.generation.to_object(py))?;
+        dict.set_item("parameters", properties.parameters.to_object(py))?;
+        dict.set_item("secondary_cases", properties.secondary_cases.to_object(py))?;
+        dict.set_item("sir", sir.to_object(py))?;
+        dict.set_item("i_events", i_events.to_object(py))?;
+        dict.set_item("r_events", r_events.to_object(py))?;
+        dict.set_item("e_events", e_events.to_object(py))?;
+        dict.set_item("ts", ts.to_object(py))?;
+    
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+#[pyfunction]
+fn small_gillespie(degree_age_breakdown: Vec<Vec<usize>>, tau: f64, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize) -> PyResult<Py<PyDict>> {
+    
+    let mut cur_params = outbreak_params.clone();
+    cur_params[0] = tau;
+    let network = network_structure::NetworkStructure::new_from_degree_dist(&partitions, &degree_age_breakdown);
+    let mut properties = network_properties::NetworkProperties::new(&network, &cur_params);
+
+    let (sir, e_events, i_events, r_events, ts) = run_model::small_g(&network, &mut properties, num_infec);
+               
+    
+    // Initialize the Python interpreter
+    Python::with_gil(|py| {
+        // Create output PyDict
+        let dict = PyDict::new_bound(py);
+        
+        dict.set_item("adjacency_matrix", network.adjacency_matrix.to_object(py))?;
+        dict.set_item("degrees", network.degrees.to_object(py))?;
+        dict.set_item("frequency_distribution", network.frequency_distribution.to_object(py))?;
+        dict.set_item("partitions", network.partitions.to_object(py))?;
+        dict.set_item("ages", network.ages.to_object(py))?;
+        dict.set_item("disease_from", properties.disease_from.to_object(py))?;
+        dict.set_item("generation", properties.generation.to_object(py))?;
+        dict.set_item("parameters", properties.parameters.to_object(py))?;
+        dict.set_item("secondary_cases", properties.secondary_cases.to_object(py))?;
+        dict.set_item("sir", sir.to_object(py))?;
+        dict.set_item("i_events", i_events.to_object(py))?;
+        dict.set_item("r_events", r_events.to_object(py))?;
+        dict.set_item("e_events", e_events.to_object(py))?;
+        dict.set_item("ts", ts.to_object(py))?;
+    
+        // Convert dict to PyObject and return
+        Ok(dict.into())
+    })
+}
+
+
+#[pyfunction]
 fn gillesp_dur(degree_age_breakdown: Vec<Vec<usize>>, taus: Vec<f64>, iterations: usize, partitions: Vec<usize>, outbreak_params: Vec<f64>, num_infec: usize, num_dur: usize, props: Vec<f64>) -> PyResult<Py<PyDict>> {
     
     let mut I1 = vec![vec![0; iterations];taus.len()];
@@ -1362,7 +1440,9 @@ fn nd_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(gillesp_gmm_sc, m)?)?;
     m.add_function(wrap_pyfunction!(gillesp_sbm_sc, m)?)?;
     m.add_function(wrap_pyfunction!(gillesp_sbmdur_sc, m)?)?;
+    m.add_function(wrap_pyfunction!(small_sbm_dur, m)?)?;
     m.add_function(wrap_pyfunction!(small_gillespie_dur, m)?)?;
+    m.add_function(wrap_pyfunction!(small_gillespie, m)?)?;
     m.add_function(wrap_pyfunction!(dur_r0, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims, m)?)?;
     m.add_function(wrap_pyfunction!(gmm_sims_sc, m)?)?;

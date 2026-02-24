@@ -181,6 +181,136 @@ pub fn small_dur_g(network_structure: &NetworkStructureDuration, network_propert
     (sir, e_events,i_events, r_events, ts)
 }
 
+pub fn small_g(network_structure: &NetworkStructure, network_properties: &mut NetworkProperties, initially_infected: usize) -> (Vec<Vec<usize>>, Vec<i64>, Vec<i64>, Vec<i64>, Vec<f64>) {
+
+    let n = network_structure.partitions.last().unwrap().to_owned();
+    let mut rng = rand::thread_rng();
+    let mut probabilities: Vec<f64> = network_structure.degrees.iter().map(|&deg| deg as f64).collect();
+    let mut selected: Vec<usize> = Vec::new();
+    for _ in 0..initially_infected {
+        let dist = WeightedIndex::new(&probabilities).unwrap();
+        let i = dist.sample(&mut rng);
+        selected.push(i);
+        probabilities[i] = 0.;
+    }
+    for &i in selected.iter() {
+        network_properties.nodal_states[i] = State::Infected;
+        network_properties.generation[i] = 1;
+    }
+    let mut sir: Vec<Vec<usize>> = Vec::new();
+    sir.push(network_properties.count_states());
+    let mut age_dur_sc: Vec<Vec<Vec<usize>>> = vec![vec![vec![0; 1]; network_structure.partitions.len()]; network_structure.partitions.len()];
+
+    let mut i_cur: Vec<usize> = network_properties.nodal_states
+        .iter()
+        .enumerate()
+        .filter(|(_,&state)| state == State::Infected)
+        .map(|(i,_)| i)
+        .collect();
+    let mut r_cur: Vec<usize> = Vec::new();
+    let mut e_cur: Vec<usize> = Vec::new();
+    let mut t = 0.;
+    let (mut i_events, mut r_events, mut e_events, mut ts): (Vec<i64>, Vec<i64>, Vec<i64>, Vec<f64>) = (i_cur.iter().map(|x| *x as i64).collect(), vec![-1; i_cur.len()], vec![-1; i_cur.len()], vec![0.; i_cur.len()]);
+    let beta = network_properties.parameters[0];
+    let sigma = network_properties.parameters[1];
+    let gamma = network_properties.parameters[2];
+
+    while i_cur.len() + e_cur.len() > 0 {
+        
+        let mut rate_pp = Vec::new();
+        let rate_inf = i_cur.iter().map(|&i| {
+            rate_pp.push(
+                network_structure.adjacency_matrix[i]  
+                    .iter()
+                    .map(|link| {
+                        if network_properties.nodal_states[link.1] == State::Susceptible {
+                            1.
+                        }
+                        else {
+                            0.
+                        }
+                    }).sum::<f64>()
+                );                
+            rate_pp.last().unwrap().to_owned()
+        }).sum::<f64>() * beta;
+        let rate_rec = i_cur.len() as f64 * gamma;
+        let rate_trans = e_cur.len() as f64 * sigma;
+        let rate_total = rate_inf + rate_rec + rate_trans;
+
+        // time to next event
+        let u1 = rng.gen::<f64>();
+        let dt = (1.0 / u1).ln() / rate_total;
+        t += dt;
+        let p_inf = rate_inf / rate_total;
+        let p_trans = rate_trans / rate_total;
+        let u2 = rng.gen::<f64>();
+        if u2 < p_inf {
+            // infection event 
+            let dist_infec = WeightedIndex::new(&rate_pp).unwrap();
+            let index_case = i_cur[dist_infec.sample(&mut rng)];
+            let dist_sus = WeightedIndex::new(&network_structure.adjacency_matrix[index_case]
+                .iter()
+                .map(|(_, j)| {
+                    if network_properties.nodal_states[*j] == State::Susceptible {
+                        1.
+                    }
+                    else {
+                        0.
+                    }
+                })
+                .collect::<Vec<f64>>()).unwrap();
+            let new_case = network_structure.adjacency_matrix[index_case][dist_sus.sample(&mut rng)].1;
+
+            network_properties.nodal_states[new_case] = State::Exposed1;
+            network_properties.disease_from[new_case] = index_case as i64;
+            network_properties.generation[new_case] = network_properties.generation[index_case] + 1;
+            network_properties.secondary_cases[index_case] += 1;
+            age_dur_sc[network_structure.ages[index_case]][network_structure.ages[new_case]][0] += 1;
+            e_cur.push(new_case);
+            update_seir(&mut sir, 1);
+            e_events.push(new_case as i64);
+            i_events.push(-1);
+            r_events.push(-1);
+            ts.push(t);
+        }
+        else if u2 < p_inf + p_trans {
+            // transition to infective event
+            let idx_e = rng.gen_range(0..e_cur.len());
+            let trans_case = e_cur[idx_e];
+            match network_properties.nodal_states[trans_case] {
+                State::Exposed1 => network_properties.nodal_states[trans_case] = State::Exposed2,
+                State::Exposed2 => network_properties.nodal_states[trans_case] = State::Exposed3,
+                State::Exposed3 => {
+                    network_properties.nodal_states[trans_case] = State::Infected;
+                    i_cur.push(trans_case);
+                    e_cur.remove(idx_e);
+                    update_seir(&mut sir, 0);
+                    e_events.push(-1);
+                    i_events.push(trans_case as i64);
+                    r_events.push(-1);
+                    ts.push(t);
+                },
+                _ => println!("Error in exposure transition"),
+            }
+
+        }
+        else {
+            // recovery event 
+            let idx_rec = rng.gen_range(0..i_cur.len());
+            let rec_case = i_cur[idx_rec];
+            network_properties.nodal_states[rec_case] = State::Recovered;
+            i_cur.remove(idx_rec);
+            update_seir(&mut sir, 2);
+            r_cur.push(rec_case);
+            e_events.push(-1);
+            i_events.push(-1);
+            r_events.push(rec_case as i64);
+            ts.push(t);
+        }
+    }
+    (sir, e_events,i_events, r_events, ts)
+}
+
 pub fn dur_gillesp(network_structure: &NetworkStructureDuration, network_properties: &mut NetworkProperties, initially_infected: usize, num_dur: usize)
     -> (f64, usize, usize, usize, usize, usize, f64, Vec<Vec<Vec<usize>>>, Vec<Vec<Vec<usize>>>, usize) {
 
