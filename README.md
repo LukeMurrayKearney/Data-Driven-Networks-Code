@@ -1,6 +1,6 @@
 # Data-Driven Networks Code
 
-The purpose of this repository is to assist readers in reproducing our results using the heterogeneous block model (HBM) to create age-structured contact networks as described in the following work:
+The purpose of this repository is to assist readers in reproducing our results using our model to create age-structured contact networks as described in the following work:
 
 Preprint page: https://www.arxiv.org/abs/2503.11527.
 
