@@ -78,16 +78,6 @@ pub fn pdf(xs: Vec<f64>, params: Vec<f64>) -> Vec<f64> {
     let tau: f64 = params[3];
 
     let normal: Normal = Normal::new(0., 1.).unwrap();
-    
-    // // pdf of dpln
-    // let f = xs
-    //     .iter()
-    //     .map(|&x| {
-    //         (alpha*beta / (alpha + beta)) * (calc_a(alpha, nu, tau) * x.powf(-alpha - 1.) * normal.cdf((x.ln() - nu - alpha*tau.powi(2)) / tau) + 
-    //         x.powf(beta-1.) * calc_a(-beta, nu, tau) * (1. - normal.cdf((x.ln() - nu + beta*tau.powi(2)) / tau)))
-    //     })
-    //     .collect();
-
 
     // Ramirez approch 'Bayesian Inference for double pareto lognormal queues'
     let f = xs
@@ -98,45 +88,6 @@ pub fn pdf(xs: Vec<f64>, params: Vec<f64>) -> Vec<f64> {
         })
         .collect();
 
-    // // Reed and Jorgensen mixed approach, cited in the same paper.
-    // let f = xs
-    //     .iter()
-    //     .map(|&x| {
-    //         (beta/(alpha+beta)) * 
-    //         alpha*x.powf(- alpha - 1.) *
-    //         (alpha*nu + alpha.powi(2)*tau.powi(2)/2.).exp() *
-    //         normal.cdf((x.ln() - nu - alpha*tau.powi(2))/tau) +
-    //         (alpha/(alpha + beta)) * 
-    //         beta * x .powf(- beta - 1.) *
-    //         (-beta*nu + beta.powi(2)*tau.powi(2)/2.).exp() *
-    //         normal.cdf((x.ln() - nu + beta*tau.powi(2))/tau)
-    //     })
-    //     .collect();
-
-    // // grbac note solution
-    // let f = xs
-    //     .iter()
-    //     .map(|&x| {
-    //         (alpha*beta)/(alpha+beta) * (
-    //             calc_a(alpha, nu, tau) * x.powf(-alpha-1.) *normal.cdf((x.ln() - nu - alpha*tau.powi(2)) / tau) +
-    //             calc_a(-beta, nu, tau) * x.powf(beta-1.) * (1. - normal.cdf((x.ln() - nu + beta*tau.powi(2))/tau))
-    //         )
-    //     })
-    //     .collect();
-
-    // scipy things 
-    // let f = xs
-    //     .iter()
-    //     .map(|&x| {
-    //         let a_plus_b = alpha + beta;
-    //         let log_f1 = alpha.ln() + x.ln() * (-1. - alpha) + (alpha*nu + alpha.powi(2) * tau / 2.) +
-    //             normal.cdf((x.ln() - nu - alpha * tau)/tau.sqrt()).ln();
-    //         let log_f2 = beta.ln() + x.ln() * (beta - 1.) + (-beta * nu + beta.powi(2) * tau / 2.) +
-    //             normal.cdf(-((x.ln() - nu + beta * tau)/tau.sqrt())).ln();
-
-    //         beta/a_plus_b * log_f1.exp() + alpha/a_plus_b * log_f2.exp()
-    //     })
-    //     .collect();
     f
 }
 
@@ -145,9 +96,6 @@ fn mills_ratio(x: f64) -> f64 {
     (1.-normal.cdf(x))/normal.pdf(x)
 }
 
-// fn calc_a(theta: f64, nu: f64, tau: f64) -> f64{
-//     (theta*nu + tau.powi(2)*tau.powi(2)/2.0).exp()
-// }
 
 pub fn fit_dpln(data: Vec<f64>, iters: usize, prior_params: Vec<f64>) -> Result<Parameters, Error> {
 

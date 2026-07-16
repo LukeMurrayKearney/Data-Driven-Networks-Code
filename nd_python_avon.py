@@ -100,6 +100,8 @@ def build_network(n, partitions, contact_matrix, params=None, dist_type ="nbinom
         network = nd_r.sbm_from_vars(n, partitions, contact_matrix)
     elif dist_type == 'gmm':
         network = gmm_network(degree_dist, partitions)
+    elif dist_type == 'gmm_dur':
+        network = nd_r.network_dur(degree_dist, partitions, num_dur, props)
     elif dist_type == 'sbm_dur':
         network = nd_r.sbm_duration(n, partitions, contact_matrix, num_dur, props)
     else:
@@ -333,12 +335,12 @@ def make_egos_list(df, buckets, duration=False):
             else:
                 j = get_bucket_index(x['cnt_age_exact'], buckets=buckets)
                 k = x['duration_multi']
-                k = 1 if np.isnan(k) else int(k)
+                k = 1 if np.isnan(k) or duration==False else int(k)
                 egos[-1]['contacts'][j*num_dur + k-1] += 1
         else:
             i = get_bucket_index(x['part_age'], buckets=buckets)
             k = x['duration_multi']
-            k = 1 if np.isnan(k) else int(k)
+            k = 1 if np.isnan(k) or duration==False else int(k)
             egos.append({'age': i, 'contacts': np.zeros((len(buckets) + 1)*num_dur), 'degree': 0})
             if np.isnan(x['cnt_age_exact']):
                 continue
@@ -357,7 +359,7 @@ def make_egos_list(df, buckets, duration=False):
 
 
 
-def fit_dist(egos, dist_type, buckets, num_per_bucket, save_fig=False, file_path=None, log=False, to_csv=False, fig_data_file='', num_bins=15):
+def fit_dist(egos, dist_type, buckets, num_per_bucket, save_fig=False, file_path=None, log=False, to_csv=False, fig_data_file='', num_bins=15, duration=False):
     params = []
     # plotting
     num_subplots = len(num_per_bucket) if duration == False else len(egos[0]['contacts'])

@@ -31,7 +31,7 @@ for i, data in enumerate(datas):
     with open(f'input_data/egos/{data}_dur_small.json', 'r') as f:
         egos = json.load(f)
     props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
-
+    
     for k in range(num_networks):
         samples_for_plot = []
         classifier = []

@@ -15,7 +15,8 @@ def main():
     # data = sys.argv[1]
     # model = sys.argv[2]
 
-    datas = ['comixa','comixb', 'comix3', 'poly']
+    datas = ['reconnect']
+    # datas = ['comixa','comixb', 'comix3', 'poly']
     models = ['sbm', 'gmm']
     
     for data in datas:
