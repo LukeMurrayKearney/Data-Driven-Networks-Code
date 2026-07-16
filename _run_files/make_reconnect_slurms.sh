@@ -2,7 +2,7 @@
 # Generates the reconnect .slurm run files (rdur_noage, rdur, sc_rdur, sc_rnodur,
 # sc_rsbmdur, sc_rsbm, rnodur_noage, rnodur, rsbmdur, rsbm), one per r_*.py script,
 # mirroring the existing p*.slurm files for the r_*.py scripts (reconnect equivalents
-# of p_*.py). Run from within _run_files/.
+# of p_*.py), then submits each one with sbatch. Run from within _run_files/.
 
 set -euo pipefail
 
@@ -42,4 +42,5 @@ export OMP_NUM_THREADS=\$SLURM_CPUS_PER_TASK
 python $py_file
 EOF
     echo "wrote $slurm_file -> python $py_file"
+    sbatch "$slurm_file"
 done
