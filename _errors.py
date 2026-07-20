@@ -1,8 +1,9 @@
 import nd_rust as nd_r
-import nd_python as nd_p 
+import nd_python as nd_p
 import numpy as np
 import csv
 import sys
+import os
 import json
 import sklearn.mixture
 import math
@@ -17,7 +18,7 @@ def main():
 
     datas = ['reconnect']
     # datas = ['comixa','comixb', 'comix3', 'poly']
-    models = ['sbm', 'gmm']
+    models = ['sbm', 'gmm', 'nbinom', 'dpln']
     
     for data in datas:
         for model in models:
@@ -48,9 +49,22 @@ def main():
             with open(f'input_data/egos/{data}.json','r') as f:
                 egos = json.load(f)
             contact_matrix = np.genfromtxt(f'input_data/contact_matrices/contact_matrix_{data}.csv', delimiter=',')
-            
+
+            # dpln/nbinom params are a deterministic MLE fit to the data, so fit once
+            # and cache to disk (same convention as the pre-fit params_{data}_dpln.csv
+            # files already committed for the other datasets) rather than refitting
+            # every iteration.
+            if model in ('dpln', 'nbinom'):
+                params_path = f'input_data/parameters/params_{data}_{model}.csv'
+                if not os.path.exists(params_path):
+                    num_per_bucket = np.zeros(len(partitions))
+                    for ego in egos:
+                        num_per_bucket[ego['age']] += 1
+                    fitted_params = nd_p.fit_dist(egos, model, buckets, num_per_bucket)
+                    np.savetxt(params_path, fitted_params, delimiter=',')
+
             for i in range(iters):
-                if model == 'dpln':
+                if model in ('dpln', 'nbinom'):
                     params = np.genfromtxt(f'input_data/parameters/params_{data}_{model}.csv', delimiter=',')
                     samples = None
                 elif model == 'gmm':
