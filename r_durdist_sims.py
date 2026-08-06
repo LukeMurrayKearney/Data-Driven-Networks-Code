@@ -18,7 +18,7 @@ num_networks= 40
 # taus = np.arange(.2,.4, .01)
 
 taus1 = np.arange(.0025, .07, 0.005)
-taus3 = np.arange(0.7, .15, 0.01)
+taus3 = np.arange(0.07, .15, 0.01)
 taus2 = np.arange(.15, 2.5, .1)
 taus = np.concatenate((taus1, taus3, taus2))
 

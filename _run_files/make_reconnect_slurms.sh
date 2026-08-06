@@ -22,8 +22,10 @@ declare -A SLURM_TO_PY=(
 
 for slurm_file in "${!SLURM_TO_PY[@]}"; do
     py_file="${SLURM_TO_PY[$slurm_file]}"
+    job_name="${slurm_file%.slurm}"
     cat > "$slurm_file" <<EOF
 #!/bin/bash
+#SBATCH --job-name=$job_name
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=48
