@@ -17,10 +17,15 @@ num_networks= 40
 # taus = np.concatenate((taus1,taus2,taus3,taus4))
 # taus = np.arange(.2,.4, .01)
 
-taus1 = np.arange(.0025, .07, 0.005)
-taus3 = np.arange(0.07, .15, 0.01)
-taus2 = np.arange(.15, 2.5, .1)
-taus = np.concatenate((taus1, taus3, taus2))
+# taus1 = np.arange(.0025, .07, 0.005)
+# taus3 = np.arange(0.07, .15, 0.01)
+# taus2 = np.arange(.15, 2.5, .1)
+# taus = np.concatenate((taus1, taus3, taus2))
+
+taus1 = np.arange(0.01, 0.5, 0.04)
+taus2 = np.arange(0.5, 1.5, 0.1)
+taus3 = np.arange(1.5, 6, 0.3)
+taus = np.concatenate((taus1, taus2, taus3))
 
 
 buckets = np.array([5,12,18,30,40,50,60,70])
@@ -58,5 +63,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(),num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k+num_networks}_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}_fin.json','w') as f:
             json.dump(res, f)
