@@ -1,0 +1,59 @@
+# import sys
+# import os
+# sys.path.append(os.path.abspath('..'))
+import nd_python_avon as nd_p
+import numpy as np
+import json
+import sklearn.mixture
+import math
+
+n = 100_000
+num_networks= 20
+
+## same sweep as the other *_r0_comparison.json runs, so a tau index means the
+## same transmission rate in every dataset and the R0s can be compared directly
+taus = np.linspace(0, 7, 200)
+iterations = 48
+
+buckets = np.array([5,12,18,30,40,50,60,70])
+partitions = [0.058*n, 0.145*n, 0.212*n, 0.364*n, 0.497*n, 0.623*n, 0.759*n, 0.866*n, n]
+
+per_partition = [a if i == 0 else a-partitions[i-1] for i, a in enumerate(partitions)]
+
+bucket_labels = ['0-4', '5-11', '12-17', '18-29', '30-39', '40-49', '50-59', '60-69', '70+']
+duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
+datas = ['reconnect']
+
+## the other *_r0_comparison.json files hold only these; gmm_dur_gillesp_sc also
+## returns age_dur_sc, which is dropped to match them (and to keep the files small)
+keys = ['sc', 'sc2', 'sc3', 'taus']
+
+
+for i, data in enumerate(datas):
+    with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_smalldur.json', 'r') as f:
+        optimal_num_components = json.load(f)
+    ##################### read fits ####################################
+    with open(f'input_data/egos/{data}_dur_small.json', 'r') as f:
+        egos = json.load(f)
+    props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
+
+    for k in range(num_networks):
+        print(f'network {k} for data {data}', flush=True)
+        samples_for_plot = []
+        classifier = []
+        samples = []
+        for l, _ in enumerate(partitions):
+            samples_for_plot.append([])
+            classifier.append(sklearn.mixture.GaussianMixture(n_components=optimal_num_components[data][l], covariance_type='full'))
+            egos_age = [a for a in egos if a['age'] == l]
+            ## use log(k+1) instead of k to fit
+            X = [[math.log(b+1) for b in a['contacts']] for a in egos_age]
+            classifier[l].fit(X)
+            ## sample same number of people as the data
+            samples_tmp,_ = classifier[l].sample(per_partition[l])
+            for sample in samples_tmp:
+                samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
+                samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
+        res = nd_p.gmm_dur_gillesp_sc(samples,partitions=partitions,num_dur=3, taus=taus, iterations=iterations,props=props.tolist(), num_infec=1)
+        with open(f'duration+ages/seir_sims/{data}_{k+num+networks}_r0_comparison.json','w') as f:
+            json.dump({key: res[key] for key in keys}, f)
