@@ -3,6 +3,9 @@
 # sys.path.append(os.path.abspath('..'))
 import nd_python_avon as nd_p 
 import numpy as np
+import glob
+import os
+import re
 import json
 import sklearn.mixture
 import math
@@ -15,9 +18,10 @@ num_networks= 40
 # taus2 = np.arange(.15, 2.5, .1)
 # taus = np.concatenate((taus1, taus3, taus2))
 
-taus1 = np.arange(0.01, 0.5, 0.03)
-taus2 = np.arange(0.5, 3, 0.1)
-taus = np.concatenate((taus1, taus2))
+## taus placing 24 points evenly across R0 = 0.8-5.5, by inverting the
+## measured tau -> R0 curve of the runs already on disk; see the tau
+## coverage section of thesis_figs.ipynb
+taus = np.array([0.091037, 0.12807, 0.14922, 0.18209, 0.25149, 0.28637, 0.36422, 0.39976, 0.48059, 0.56155, 0.61804, 0.6762, 0.86435, 0.99238, 1.1042, 1.1709, 1.198, 1.4894, 1.6455, 1.8141, 2.0616, 2.0893, 2.3604, 2.3813])
 
 buckets = np.array([])
 partitions = [n]
@@ -29,6 +33,33 @@ duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
 datas = ['reconnect']
 
 
+SUFFIX = '_noage'   # duration+ages/seir_sims/{data}_{k}{SUFFIX}_fin.json
+
+
+def claim_index(data):
+    """Reserve the next unused replicate index, and create the file to hold it.
+
+    New runs continue past whatever is already on disk instead of overwriting it.
+    The tau grid above is not the one earlier batches used, and the aggregation in
+    paper_figs.ipynb / thesis_figs.ipynb keys on the tau value rather than on its
+    position in the grid, so old and new files pool together without conflict.
+
+    The empty placeholder claims the index immediately, so that a resubmitted job --
+    or a second job on the same pair -- cannot pick the same one while this network
+    is still simulating.  Aggregators skip files they cannot parse, so a placeholder
+    left behind by a job that died is ignored rather than counted.
+    """
+    pattern = re.compile(rf'^{data}_(\d+){SUFFIX}_fin\.json$')
+    used = [-1]
+    for path in glob.glob(f'duration+ages/seir_sims/{data}_*_fin.json'):
+        match = pattern.match(os.path.basename(path))
+        if match:
+            used.append(int(match.group(1)))
+    k = max(used) + 1
+    open(f'duration+ages/seir_sims/{data}_{k}{SUFFIX}_fin.json', 'w').close()
+    return k
+
+
 for i, data in enumerate(datas):
     with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_dur_noage.json', 'r') as f:
         optimal_num_components = json.load(f)
@@ -37,7 +68,9 @@ for i, data in enumerate(datas):
         egos = json.load(f)
     props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
 
-    for k in range(num_networks):
+    for _ in range(num_networks):
+        k = claim_index(data)
+        print(f'network {k} for data {data}', flush=True)
         samples_for_plot = []
         classifier = []
         samples = []
@@ -54,5 +87,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48,props=props.tolist(),num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k}_noage_fin.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}{SUFFIX}_fin.json','w') as f:
             json.dump(res, f)

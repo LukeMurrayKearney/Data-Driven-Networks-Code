@@ -3,6 +3,9 @@
 # sys.path.append(os.path.abspath('..'))
 import nd_python_avon as nd_p 
 import numpy as np
+import glob
+import os
+import re
 import json
 import sklearn.mixture
 import math
@@ -23,6 +26,32 @@ duration_labels = ['0-1 hour', '1-4 hours', '4+ hours']
 datas = ['reconnect']
 
 
+SUFFIX = ''   # duration+ages/seir_sims/{data}_{k}{SUFFIX}_age_dur.json
+
+
+def claim_index(data):
+    """Reserve the next unused replicate index, and create the file to hold it.
+
+    New runs continue past whatever is already on disk instead of overwriting it.
+    This loop used to start from 0 every time, so resubmitting the job destroyed the
+    first `num_networks` results of the previous batch.
+
+    The empty placeholder claims the index immediately, so that a resubmitted job --
+    or a second job on the same pair -- cannot pick the same one while this network
+    is still simulating.  Aggregators skip files they cannot parse, so a placeholder
+    left behind by a job that died is ignored rather than counted.
+    """
+    pattern = re.compile(rf'^{data}_(\d+){SUFFIX}_age_dur\.json$')
+    used = [-1]
+    for path in glob.glob(f'duration+ages/seir_sims/{data}_*_age_dur.json'):
+        match = pattern.match(os.path.basename(path))
+        if match:
+            used.append(int(match.group(1)))
+    k = max(used) + 1
+    open(f'duration+ages/seir_sims/{data}_{k}{SUFFIX}_age_dur.json', 'w').close()
+    return k
+
+
 for i, data in enumerate(datas):
     with open(f'duration+ages/data/gmm_opt_comp/optimal_components_{data}_log_smalldur.json', 'r') as f:
         optimal_num_components = json.load(f)
@@ -31,7 +60,9 @@ for i, data in enumerate(datas):
         egos = json.load(f)
     props = np.genfromtxt(f'input_data/durations/{data}.csv', delimiter=',')
 
-    for k in range(num_networks):
+    for _ in range(num_networks):
+        k = claim_index(data)
+        print(f'network {k} for data {data}', flush=True)
         samples_for_plot = []
         classifier = []
         samples = []
@@ -48,5 +79,5 @@ for i, data in enumerate(datas):
                 samples.append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
                 samples_for_plot[-1].append([int(np.round(np.exp(b)-1)) if int(np.round(np.exp(b)-1))>=0 else 0 for b in sample])
         res = nd_p.gmm_dur_gillesp_sc(samples,partitions=partitions,num_dur=3, taus=taus, iterations=48*2,props=props.tolist(), num_infec=1)
-        with open(f'duration+ages/seir_sims/{data}_{k}_age_dur.json','w') as f:
+        with open(f'duration+ages/seir_sims/{data}_{k}{SUFFIX}_age_dur.json','w') as f:
             json.dump(res, f)
