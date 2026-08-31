@@ -336,7 +336,7 @@ def main():
                     help="replicate networks per pair; one network over a dense tau "
                          "grid buys more of the k-against-R curve than three over a "
                          "coarse one, for the same number of outbreaks")
-    ap.add_argument("--iterations", type=int, default=24,
+    ap.add_argument("--iterations", type=int, default=96,
                     help="outbreaks per tau per network, as in the *_sc.py scripts")
     ap.add_argument("--n", type=int, default=100_000, help="nodes per network")
     ap.add_argument("--out", type=Path, default=SIM_DIR)
