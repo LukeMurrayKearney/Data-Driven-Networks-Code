@@ -43,6 +43,7 @@ imports nd_python_avon, which needs nd_rust.
 import argparse
 import json
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -57,6 +58,12 @@ import nd_python_avon as nd_p
 # the next free index is 294 and this leaves 10 spare for local runs still to come.
 # `--audit` recomputes it; bump this constant, do not lower it.
 BASE_INDEX = 304
+
+# Every data path in this file is written relative to the repo root, which is fine
+# when you launch from there and silently wrong otherwise -- and under sbatch the
+# working directory is wherever you submitted from, not where the script lives.
+# main() chdirs here before doing anything, so the job cannot half-find its inputs.
+ROOT = Path(__file__).resolve().parent
 
 SHARES = [0.058, 0.145, 0.212, 0.364, 0.497, 0.623, 0.759, 0.866, 1.0]
 FIG_DIR = Path("output_data/figs")      # default; see --fig-dir
@@ -99,6 +106,13 @@ MODELS = {
 AUDIT_DATASETS = ["poly", "comixa", "comixb", "comixc", "comix3", "reconnect"]
 INDEX_HEADROOM = 10
 
+# One submission of an r_*.py script claims this many consecutive indices up front
+# (num_networks in those files, 20 to 50).  A gap smaller than that is not really a
+# gap: a single local batch started after this file was audited walks straight
+# through it, and the collision only shows up when the cluster results are copied
+# back.  --audit says so rather than pretending any positive clearance is fine.
+LOCAL_BATCH = 50
+
 
 # -------------------------------------------------------------------- audit
 
@@ -126,16 +140,22 @@ def audit(out_dir):
             highest = max(highest, top)
             print(f"  {data:>10s} {spec['label']:<16s} "
                   f"{'max ' + str(top) if top >= 0 else 'none'}")
-    suggested = highest + 1 + INDEX_HEADROOM
+    clearance = BASE_INDEX - (highest + 1)
     print(f"\nhighest index in use: {highest}"
           f"\nnext free index:      {highest + 1}"
-          f"\nBASE_INDEX = {suggested}   ({INDEX_HEADROOM} clear of the next free index)")
-    if suggested > BASE_INDEX:
-        print(f"\nthis file carries BASE_INDEX = {BASE_INDEX}, which is now too low."
-              f"\nEdit it to {suggested} before shipping.")
+          f"\nBASE_INDEX in this file: {BASE_INDEX}, {clearance} clear of it")
+    if clearance < 0:
+        print(f"\nUNSAFE: the cluster would write over indices that already exist."
+              f"\nRaise BASE_INDEX to at least {highest + 1 + INDEX_HEADROOM}.")
+    elif clearance < LOCAL_BATCH:
+        print(f"\nSafe today, but one r_*.py submission claims up to {LOCAL_BATCH}"
+              f"\nconsecutive indices, so a local batch started before the cluster"
+              f"\nresults come back would run through this gap.  Either hold off on"
+              f"\nlocal runs for these pairs, or raise BASE_INDEX to"
+              f"\n{highest + 1 + LOCAL_BATCH} or beyond.")
     else:
-        print(f"\nthis file carries BASE_INDEX = {BASE_INDEX}, still clear.")
-    return suggested
+        print(f"\nClear, including against a full {LOCAL_BATCH}-network local batch.")
+    return highest + 1 + INDEX_HEADROOM
 
 
 # --------------------------------------------------------------------- taus
@@ -228,6 +248,39 @@ def inputs_for(data, model):
     needed.append(Path(spec["egos"].format(data=data)))
     needed.append(Path(spec["components"].format(data=data)))
     return needed
+
+
+def manifest(datasets, models, fig_dir):
+    """Every input the selected pairs will open, and whether it is here.
+
+    Run this on the cluster to find out what did not get copied across.  The two
+    .npz caches are the ones that catch people out: they are outputs of the Figure 3
+    and Table 2 cells, so no earlier cluster job ever needed them and they are not
+    part of the input_data tree you would think to rsync.
+    """
+    needed = {}
+    for data in datasets:
+        for model in models:
+            for path in inputs_for(data, model):
+                if path.name in R0_CACHE_NAMES.values():
+                    path = Path(fig_dir) / path.name
+                needed.setdefault(path, []).append(f"{data}/{model}")
+    absent = [p for p in sorted(needed) if not p.exists()]
+    print(f"working directory: {Path.cwd()}")
+    print(f"{len(needed)} files needed for {' '.join(datasets)} "
+          f"x {' '.join(models)}\n")
+    for path in sorted(needed):
+        if path.exists():
+            print(f"  ok       {path.stat().st_size / 1e6:8.2f} MB  {path}")
+        else:
+            print(f"  MISSING            --  {path}")
+    if not absent:
+        print("\nnothing missing.")
+        return absent
+    print(f"\n{len(absent)} missing.  From the repo on your own machine:\n")
+    print(f"  rsync -R {' '.join(str(p) for p in absent)} \\")
+    print(f"      <user>@<cluster>:<path-to-repo>/")
+    return absent
 
 
 def missing_inputs(data, model, fig_dir):
@@ -339,11 +392,13 @@ def main():
     ap.add_argument("--iterations", type=int, default=96,
                     help="outbreaks per tau per network, as in the *_sc.py scripts")
     ap.add_argument("--n", type=int, default=100_000, help="nodes per network")
-    ap.add_argument("--out", type=Path, default=SIM_DIR)
-    ap.add_argument("--fig-dir", type=Path, default=FIG_DIR,
+    ap.add_argument("--out", type=Path, default=None,
+                    help=f"default {SIM_DIR}, under the repo root")
+    ap.add_argument("--fig-dir", type=Path, default=None,
                     help=f"where the cached tau -> R0 curves live "
-                         f"({', '.join(R0_CACHE_NAMES.values())}); point it at a "
-                         f"notebook's own figure directory to invert the curves it built")
+                         f"({', '.join(R0_CACHE_NAMES.values())}); default {FIG_DIR}, "
+                         f"under the repo root.  Point it at a notebook's own figure "
+                         f"directory to invert the curves it built")
     ap.add_argument("--base-index", type=int, default=BASE_INDEX,
                     help=f"first replicate index, for every pair (default {BASE_INDEX}, "
                          f"audited against this machine).  Unlike the original this is "
@@ -358,12 +413,28 @@ def main():
                     help="carry on past pairs whose tau -> R0 curve or input files are "
                          "absent.  Off by default: on a cluster that silently turns the "
                          "whole job into a no-op that still exits 0")
+    ap.add_argument("--manifest", action="store_true",
+                    help="list every input file the selected datasets and models need, "
+                         "flag the ones that are absent, and print the rsync that would "
+                         "fetch them.  Run this on the cluster first")
     ap.add_argument("--audit", action="store_true",
                     help="report the highest replicate index per pair in --out and the "
                          "BASE_INDEX it implies, then stop.  Run this here before shipping")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the plan -- taus, R targets, filenames -- and stop")
     args = ap.parse_args()
+
+    # A path the user typed means what it meant in the directory they typed it in;
+    # the defaults, like every other data path here, hang off the repo root.  Read
+    # both before chdir, because after it "." is no longer where they were standing.
+    here = Path.cwd()
+    args.out = ROOT / SIM_DIR if args.out is None else (here / args.out).resolve()
+    args.fig_dir = (ROOT / FIG_DIR if args.fig_dir is None
+                    else (here / args.fig_dir).resolve())
+    os.chdir(ROOT)
+
+    if args.manifest:
+        sys.exit(1 if manifest(args.datasets, args.models, args.fig_dir) else 0)
 
     if args.audit:
         audit(args.out)
@@ -410,7 +481,8 @@ def main():
 
     if problems and not args.skip_missing:
         print("\n" + "\n".join(f"  ! {p}" for p in problems))
-        print("\nrefusing to run: copy the missing files across, or pass --skip-missing.")
+        print("\nrefusing to run.  --manifest lists every input and what to copy:\n")
+        manifest(args.datasets, args.models, args.fig_dir)
         sys.exit(1)
     if not plan:
         print("\nnothing to run.")
